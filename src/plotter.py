@@ -5,15 +5,11 @@ import toolbox as tb
 
 
 class Plotter:
-    def __init__(self, rows: int = 1, cols: int = 1, show_axes: bool = False, invert_yaxis: bool = True,
+    def __init__(self, rows: int = 1, cols: int = 1, hide_axes: bool = True, invert_yaxis: bool = True,
                  aspect_equal: bool = False):
-        self.fig, self.axes = plt.subplots(rows, cols)
-        if rows == 1 and cols == 1:
-            self.axes = np.array([self.axes])
-        else:
-            self.axes = np.array(self.axes)
-        for ax in self.axes:
-            if show_axes:
+        self.fig, self.axes = plt.subplots(rows, cols, squeeze=False)
+        for ax in self.axes.flatten():
+            if hide_axes:
                 ax.axis('off')
             if invert_yaxis:
                 ax.invert_yaxis()
@@ -21,7 +17,7 @@ class Plotter:
                 ax.set_aspect("equal", adjustable="box")
 
     def get_ax(self, row: int = 1, col: int = 1):
-        return self.axes[row, col]
+        return self.axes[row-1, col-1]
 
     def add_image(self, image: Image, grayscale: bool = False, row: int = 1, col: int = 1):
         if grayscale:
