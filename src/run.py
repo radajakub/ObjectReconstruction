@@ -38,7 +38,8 @@ if __name__ == "__main__":
         exit(1)
 
     if config.img1 > loader.image_num or config.img2 > loader.image_num or config.img1 < 1 or config.img2 < 1:
-        print(f'invalid image id -> must be between 1 and {loader.image_num} (including)')
+        print(
+            f'invalid image id -> must be between 1 and {loader.image_num} (including)')
         exit(1)
 
     plotter = Plotter(rows=1, cols=3)
