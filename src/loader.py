@@ -1,6 +1,7 @@
 import numpy as np
 import os
 from PIL import Image
+import toolbox as tb
 
 BASE_PATH = 'data'
 IMAGE_FOLDER = 'images'
@@ -41,7 +42,7 @@ def _get_images(path: str) -> dict:
 
 
 def _get_image_points(path: str, img: int) -> str:
-    return np.loadtxt(os.path.join(path, CORRESPONDENCE_FOLDER, f'u_{two_digit_str(img)}.txt')).T
+    return tb.e2p(np.loadtxt(os.path.join(path, CORRESPONDENCE_FOLDER, f'u_{two_digit_str(img)}.txt')).T)
 
 
 class DataLoader:

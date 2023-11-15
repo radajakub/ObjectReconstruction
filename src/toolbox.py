@@ -23,14 +23,35 @@ def sqc(x: np.ndarray) -> np.ndarray:
     return np.array([[0, -b3, b2], [b3, 0, -b1], [-b2, b1, 0]])
 
 
-def EutoRt(E: np.ndarray, u1: np.ndarray, u2: np.ndarray) -> (np.ndarray, np.ndarray):
+def EutoRt(E: np.ndarray, u1: np.ndarray, u2: np.ndarray) -> list[(np.ndarray, np.ndarray)]:
     assert (E.shape == (3, 3))
     assert (u1.shape[0] == 3)
     assert (u2.shape[0] == 3)
     assert (u1.shape[1] == u2.shape[1])
 
+    # compute SVD of E
+    U, S, Vt = np.linalg.svd(E)
+    V = Vt.T
+    # verify digonal matrix
+    if S[0] != S[1] or S[2] != 0:
+        return []
+    # verify rotation matrix
+    if np.linalg.det(U) != U or np.linalg.det(V) != V:
+        return []
 
-# compute sampson error for epipolar geometry
+    Rt = []
+    for alpha in [-1, 1]:
+        for beta in [-1, 1]:
+            W = np.array([[0, alpha, 0], [-alpha, 0, 0], [0, 0, 1]])
+            R = U @ W @ Vt
+            t = (beta * U[:, 2]).reshape(3, 1)
+            t = t / np.sqrt(np.sum(t ** 2))
+            # verify chirality
+            P1 = np.eye(3, 4)  # canonical camera matrix
+            P2 = np.hstack((R, t))  # rotated and moved camera
+    return Rt
+
+
 def err_F_sampson(F: np.ndarray, u1: np.ndarray, u2: np.ndarray) -> np.ndarray:
     assert (F.shape == (3, 3))
     assert (u1.shape[0] == 3)
