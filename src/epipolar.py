@@ -6,7 +6,7 @@ import toolbox as tb
 
 
 class EpipolarEstimator(RANSAC):
-    def __init__(self, K: np.ndarray, threshold: float = 3, p: float = 0.9999, max_iterations: int = 1000, rng: np.random.Generator = None) -> None:
+    def __init__(self, K: np.ndarray, threshold: float = 3, p: float = 0.9999, max_iterations: int = 200, rng: np.random.Generator = None) -> None:
         super().__init__(model=EssentialMatrix(K), threshold=threshold,
                          p=p, max_iterations=max_iterations, rng=rng)
 
@@ -54,19 +54,15 @@ class EpipolarEstimator(RANSAC):
 
                 # compute support with sampson error (without visibility yet)
                 eps = self.model.error(E, X1, X2)
-                supp = self.model.support(
-                    eps[eps < self.threshold], threshold=self.threshold)
+                supp = self.model.support(eps[eps < self.threshold], threshold=self.threshold)
                 if supp <= best_supp:
                     continue
 
-                # filter only visible points
-                visible_indices = np.arange(X1.shape[1])
-
                 # compute inliers from visible points
-                eps = self.model.error(E, X1[:, visible_indices], X2[:, visible_indices])
-                # inlier_indices = eps < self.threshold
-                inlier_indices = visible_indices[eps < self.threshold]
-                supp = self.model.support(eps[inlier_indices], threshold=self.threshold)
+                eps = self.model.error(E, X1, X2)
+                inliers = eps < self.threshold
+                inlier_indices = np.arange(X1.shape[1])[inliers]
+                supp = self.model.support(eps[inliers], threshold=self.threshold)
                 Ni = inlier_indices.shape[0]
 
                 if supp > best_supp:
