@@ -4,51 +4,25 @@ import numpy as np
 from plotter import Plotter
 from loader import DataLoader
 from epipolar import EpipolarEstimator
-import toolbox as tb
-
-
-class Config:
-    def __init__(self, argv: list[str]) -> None:
-        args = argv[1:]
-        if len(args) % 2 != 0:
-            print("wrong number of arguments")
-            exit(1)
-
-        self.scene = None
-        self.img1 = None
-        self.img2 = None
-        for i in range(0, len(args), 2):
-            key, val = args[i], args[i+1]
-            if key == '--scene':
-                self.scene = val
-            elif key == '--img1':
-                self.img1 = int(val)
-            elif key == '--img2':
-                self.img2 = int(val)
-
-        if self.scene is None:
-            raise ValueError('scene not specified')
-
-        if self.img1 is None or self.img2 is None:
-            raise ValueError('one of the images images is not specified, nothing is shown')
-
-    def check_valid(self, loader: DataLoader):
-        if self.img1 > loader.image_num or config.img2 > loader.image_num or config.img1 < 1 or config.img2 < 1:
-            raise ValueError(f'invalid image id -> must be between 1 and {loader.image_num} (including)')
+from config import Config
+from logger import Logger
 
 
 if __name__ == "__main__":
-    rng = np.random.default_rng()
 
     config = Config(sys.argv)
+
+    rng = np.random.default_rng(seed=config.seed)
 
     loader = DataLoader(config.scene)
     config.check_valid(loader)
     # print(loader)
+    logger = Logger(config=config, loader=loader)
+    logger.intro()
 
     corr1, corr2 = loader.get_corresp(config.img1, config.img2)
 
-    estimator = EpipolarEstimator(K=loader.K, threshold=5, p=0.999, max_iterations=1000)
+    estimator = EpipolarEstimator(K=loader.K, threshold=config.threshold, p=config.p, max_iterations=config.max_iter, rng=rng, logger=logger)
     estimator.fit(corr1, corr2)
 
     E = estimator.estimate
@@ -87,4 +61,11 @@ if __name__ == "__main__":
             plotter.add_point(corr_in[i][:, k], color=color, size=10, row=r, col=3)
             plotter.add_line(l, color=color, linewidth=1, row=r, col=3)
 
-    plotter.show()
+    logger.dump()
+    logger.summary()
+    logger.outro()
+
+    if config.outpath is None:
+        plotter.show()
+    else:
+        plotter.save(outfile=config.outpath)

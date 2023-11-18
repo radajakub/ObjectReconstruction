@@ -69,8 +69,8 @@ def Pu2X(P1: np.ndarray, P2: np.ndarray, X1: np.ndarray, X2: np.ndarray) -> np.n
         u1, v1 = x1
         u2, v2 = x2
         D = np.array([u1 * p13 - p11, v1 * p13 - p12, u2 * p23 - p21, v2 * p23 - p22])
-        U, _, _ = np.linalg.svd(D.T @ D)
-        X[:, i] = U[:, -1]
+        _, _, Vt = np.linalg.svd(D.T @ D)
+        X[:, i] = Vt.T[:, -1]
 
     return e2p(p2e(X))
 

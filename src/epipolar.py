@@ -3,12 +3,15 @@ import numpy as np
 from ransac import RANSAC
 from models import EssentialMatrix
 import toolbox as tb
+from logger import Logger, LogEntry
+from config import Config
 
 
 class EpipolarEstimator(RANSAC):
-    def __init__(self, K: np.ndarray, threshold: float = 3, p: float = 0.9999, max_iterations: int = 200, rng: np.random.Generator = None) -> None:
+    def __init__(self, K: np.ndarray, threshold: float = Config.default_threshold, p: float = Config.default_p, max_iterations: int = Config.default_max_iter, rng: np.random.Generator = None, logger: Logger = None) -> None:
         super().__init__(model=EssentialMatrix(K), threshold=threshold,
                          p=p, max_iterations=max_iterations, rng=rng)
+        self.logger = logger
 
     def compute_epipolar_lines(self, x1: np.ndarray, x2: np.ndarray) -> np.ndarray:
         if self.estimate is None:
@@ -60,6 +63,7 @@ class EpipolarEstimator(RANSAC):
                 inlier_eps = eps[inliers]
                 supp = self.model.support(inlier_eps, threshold=self.threshold)
                 if supp <= best_supp:
+                    self.logger.log(LogEntry(iteration=self.it, inliers=inliers.sum(), support=supp, visible=-1, Nmax=Nmax))
                     continue
 
                 # compute inlier indices
@@ -68,7 +72,9 @@ class EpipolarEstimator(RANSAC):
                 # check visibility of inliers
                 P1 = np.eye(3, 4)
                 P2 = np.hstack((R, t))  # rotated and moved camera
-                X = tb.Pu2X(P1, P2, X1[:, inliers], X2[:, inliers])
+                X1_ = self.model.unapply_K(X1[:, inliers])
+                X2_ = self.model.unapply_K(X2[:, inliers])
+                X = tb.Pu2X(P1, P2, X1_, X2_)
                 u1p = P1 @ X
                 u2p = P2 @ X
                 visible = np.logical_and(u1p[2] > 0, u2p[2] > 0)
@@ -82,6 +88,9 @@ class EpipolarEstimator(RANSAC):
                     best_E = E
                     best_inlier_indices = visible_indices
                     Nmax = self._criterion(Ni / N)
+                    self.logger.log_improve(LogEntry(iteration=self.it, inliers=inlier_indices.shape[0], support=supp, visible=Ni, Nmax=Nmax))
+
+                self.logger.log(LogEntry(iteration=self.it, inliers=inlier_indices.shape[0], support=supp, visible=Ni, Nmax=Nmax))
 
         self.estimate = best_E
         self.inliers = best_inlier_indices
