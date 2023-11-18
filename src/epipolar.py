@@ -75,6 +75,7 @@ class EpipolarEstimator(RANSAC):
                 X1_ = self.model.unapply_K(X1[:, inliers])
                 X2_ = self.model.unapply_K(X2[:, inliers])
                 X = tb.Pu2X(P1, P2, X1_, X2_)
+                X = tb.e2p(tb.p2e(X))
                 u1p = P1 @ X
                 u2p = P2 @ X
                 visible = np.logical_and(u1p[2] > 0, u2p[2] > 0)

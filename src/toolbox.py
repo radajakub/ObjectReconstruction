@@ -45,6 +45,7 @@ def EutoRt(E: np.ndarray, u1: np.ndarray, u2: np.ndarray) -> list[(np.ndarray, n
             P1 = np.eye(3, 4)
             P2 = np.hstack((R, t))  # rotated and moved camera
             X = Pu2X(P1, P2, u1, u2)
+            X = e2p(p2e(X))
             u1p = P1 @ X
             u2p = P2 @ X
             if np.all(u1p[2] > 0) and np.all(u2p[2] > 0):
@@ -72,7 +73,7 @@ def Pu2X(P1: np.ndarray, P2: np.ndarray, X1: np.ndarray, X2: np.ndarray) -> np.n
         _, _, Vt = np.linalg.svd(D.T @ D)
         X[:, i] = Vt.T[:, -1]
 
-    return e2p(p2e(X))
+    return X
 
 
 def err_F_sampson(F: np.ndarray, u1: np.ndarray, u2: np.ndarray) -> np.ndarray:
