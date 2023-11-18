@@ -16,7 +16,7 @@ if __name__ == "__main__":
 
     loader = DataLoader(config.scene)
     config.check_valid(loader)
-    # print(loader)
+
     logger = Logger(config=config, loader=loader)
     logger.intro()
 
@@ -26,8 +26,10 @@ if __name__ == "__main__":
     estimator.fit(corr1, corr2)
 
     E = estimator.estimate
-    corr_in = [corr1[:, estimator.inliers], corr2[:, estimator.inliers]]
-    corr_out = [corr1[:, ~estimator.inliers], corr2[:, ~estimator.inliers]]
+    mask = np.zeros(corr1.shape[1], dtype=bool)
+    mask[estimator.inliers] = True
+    corr_in = [corr1[:, mask], corr2[:, mask]]
+    corr_out = [corr1[:, ~mask], corr2[:, ~mask]]
 
     images = [config.img1, config.img2]
     cols = 3
