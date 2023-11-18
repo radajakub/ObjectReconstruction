@@ -80,7 +80,7 @@ if __name__ == "__main__":
 
     # plot epipolar lines and points
     for c, k in enumerate(range(0, n_inliers, n_inliers // n_epipolar_lines)):
-        ls = estimator.compute_epipolar_lines(E, corr_in[0][:, k], corr_in[1][:, k])
+        ls = estimator.compute_epipolar_lines(corr_in[0][:, k], corr_in[1][:, k])
         color = plotter.get_color(c)
         for i, l in enumerate(ls):
             r = i + 1

@@ -10,8 +10,10 @@ class EpipolarEstimator(RANSAC):
         super().__init__(model=EssentialMatrix(K), threshold=threshold,
                          p=p, max_iterations=max_iterations, rng=rng)
 
-    def compute_epipolar_lines(self, E: np.ndarray, x1: np.ndarray, x2: np.ndarray) -> np.ndarray:
-        F = self.model.get_fundamental(E)
+    def compute_epipolar_lines(self, x1: np.ndarray, x2: np.ndarray) -> np.ndarray:
+        if self.estimate is None:
+            raise AttributeError("estimate not computed yet")
+        F = self.model.get_fundamental(self.estimate)
         l1 = F.T @ tb.e2p(x2[:, np.newaxis])
         l2 = F @ tb.e2p(x1[:, np.newaxis])
         return l1, l2
@@ -54,21 +56,31 @@ class EpipolarEstimator(RANSAC):
 
                 # compute support with sampson error (without visibility yet)
                 eps = self.model.error(E, X1, X2)
-                supp = self.model.support(eps[eps < self.threshold], threshold=self.threshold)
+                inliers = eps < self.threshold
+                inlier_eps = eps[inliers]
+                supp = self.model.support(inlier_eps, threshold=self.threshold)
                 if supp <= best_supp:
                     continue
 
-                # compute inliers from visible points
-                eps = self.model.error(E, X1, X2)
-                inliers = eps < self.threshold
+                # compute inlier indices
                 inlier_indices = np.arange(X1.shape[1])[inliers]
-                supp = self.model.support(eps[inliers], threshold=self.threshold)
-                Ni = inlier_indices.shape[0]
+
+                # check visibility of inliers
+                P1 = np.eye(3, 4)
+                P2 = np.hstack((R, t))  # rotated and moved camera
+                X = tb.Pu2X(P1, P2, X1[:, inliers], X2[:, inliers])
+                u1p = P1 @ X
+                u2p = P2 @ X
+                visible = np.logical_and(u1p[2] > 0, u2p[2] > 0)
+                visible_indices = inlier_indices[visible]
+
+                supp = self.model.support(inlier_eps[visible], threshold=self.threshold)
+                Ni = visible_indices.shape[0]
 
                 if supp > best_supp:
                     best_supp = supp
                     best_E = E
-                    best_inlier_indices = inlier_indices
+                    best_inlier_indices = visible_indices
                     Nmax = self._criterion(Ni / N)
 
         self.estimate = best_E
