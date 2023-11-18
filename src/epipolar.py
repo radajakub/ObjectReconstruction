@@ -1,38 +1,79 @@
 import numpy as np
-from loader import DataLoader
+
+from ransac import RANSAC
+from models import EssentialMatrix
+import toolbox as tb
 
 
-class Hypothesis:
-    def __init__(self, X1: np.ndarray, X2: np.ndarray, sample_size: int = 5) -> None:
+class EpipolarEstimator(RANSAC):
+    def __init__(self, K: np.ndarray, threshold: float = 3, p: float = 0.9999, max_iterations: int = 1000, rng: np.random.Generator = None) -> None:
+        super().__init__(model=EssentialMatrix(K), threshold=threshold,
+                         p=p, max_iterations=max_iterations, rng=rng)
+
+    def compute_epipolar_lines(self, E: np.ndarray, x1: np.ndarray, x2: np.ndarray) -> np.ndarray:
+        F = self.model.get_fundamental(E)
+        l1 = F.T @ tb.e2p(x2[:, np.newaxis])
+        l2 = F @ tb.e2p(x1[:, np.newaxis])
+        return l1, l2
+
+    def fit(self, X1: np.ndarray, X2: np.ndarray) -> None:
         assert (X1.shape == X2.shape)
-        sample_indices = np.random.choice(X1.shape[1], sample_size, replace=False)
-        self.X1 = X1[:, sample_indices]
-        self.X2 = X2[:, sample_indices]
+        X1 = tb.e2p(X1)
+        X2 = tb.e2p(X2)
 
-        self.Es = [E for E in self._find_Es() if self._check(E)]
+        self.estimate = None
+        self.inliers = None
 
-    def _find_Es(self):
-        return [np.eye(3)]
+        self.it = 0
+        Nmax = np.inf
 
-    def _check(self, E: np.ndarray) -> bool:
-        return True
+        best_supp = 0
+        best_E = None
+        best_inlier_indices = None
+        N = X1.shape[1]
 
+        while self.it <= Nmax and self.it < self.max_iterations:
+            self.it += 1
 
-class EpiploarEstimator:
-    def __init__(self, data: DataLoader, img1: int, img2: int) -> None:
-        # precompute inverse calibration
-        self.K = data.K
-        self.K_ = np.linalg.inv(self.K)
-        # obtain image correspondences and unapply calibration matrix K
-        self.X1, self.X2 = data.get_corresp(img1, img2)
-        self.X1 = self.unapply_K(self.X1)
-        self.X2 = self.unapply_K(self.X2)
+            # sample
+            sample_indices = self.rng.choice(N, self.model.min_samples, replace=False)
+            X1_sample = self.model.unapply_K(X1[:, sample_indices])
+            X2_sample = self.model.unapply_K(X2[:, sample_indices])
 
-    def unapply_K(self, points: np.ndarray) -> np.ndarray:
-        return self.K_ @ points
+            # construct hypothesis
+            Es = self.model.hypothesis(X1_sample, X2_sample)
+            # verify every essential matrix
+            Eidx = 0
+            for E in Es:
+                Eidx += 1
 
-    def apply_K(self, points: np.ndarray) -> np.ndarray:
-        return self.K @ points
+                # verify visibility of samples and get R,t
+                R, t = self.model.decompose(E, X1_sample, X2_sample)
+                if R.size == 0 or t.size == 0:
+                    continue
 
-    def estimate(self):
-        hypothesis = Hypothesis(self.X1, self.X2)
+                # compute support with sampson error (without visibility yet)
+                eps = self.model.error(E, X1, X2)
+                supp = self.model.support(
+                    eps[eps < self.threshold], threshold=self.threshold)
+                if supp <= best_supp:
+                    continue
+
+                # filter only visible points
+                visible_indices = np.arange(X1.shape[1])
+
+                # compute inliers from visible points
+                eps = self.model.error(E, X1[:, visible_indices], X2[:, visible_indices])
+                # inlier_indices = eps < self.threshold
+                inlier_indices = visible_indices[eps < self.threshold]
+                supp = self.model.support(eps[inlier_indices], threshold=self.threshold)
+                Ni = inlier_indices.shape[0]
+
+                if supp > best_supp:
+                    best_supp = supp
+                    best_E = E
+                    best_inlier_indices = inlier_indices
+                    Nmax = self._criterion(Ni / N)
+
+        self.estimate = best_E
+        self.inliers = best_inlier_indices

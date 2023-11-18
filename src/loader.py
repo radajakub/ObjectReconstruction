@@ -1,7 +1,6 @@
 import numpy as np
 import os
 from PIL import Image
-import toolbox as tb
 
 BASE_PATH = 'data'
 IMAGE_FOLDER = 'images'
@@ -25,9 +24,7 @@ def _get_calibration(path: str) -> np.ndarray:
 
 def _get_correspondences(path: str, img1: int, img2: int) -> np.ndarray:
     id1, id2 = _image_key(img1, img2)
-    return np.loadtxt(
-        os.path.join(path, CORRESPONDENCE_FOLDER, f'm_{two_digit_str(id1)}_{two_digit_str(id2)}.txt'),
-        dtype=int).T
+    return np.loadtxt(os.path.join(path, CORRESPONDENCE_FOLDER, f'm_{two_digit_str(id1)}_{two_digit_str(id2)}.txt'), dtype=int).T
 
 
 def _get_images(path: str) -> dict:
@@ -42,7 +39,7 @@ def _get_images(path: str) -> dict:
 
 
 def _get_image_points(path: str, img: int) -> str:
-    return tb.e2p(np.loadtxt(os.path.join(path, CORRESPONDENCE_FOLDER, f'u_{two_digit_str(img)}.txt')).T)
+    return np.loadtxt(os.path.join(path, CORRESPONDENCE_FOLDER, f'u_{two_digit_str(img)}.txt')).T
 
 
 class DataLoader:

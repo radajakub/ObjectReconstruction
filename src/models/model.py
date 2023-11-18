@@ -1,5 +1,4 @@
 import numpy as np
-from typing import Callable
 
 
 class Model:
@@ -13,7 +12,4 @@ class Model:
         raise NotImplementedError
 
     def support(self, inlier_errors: np.ndarray) -> int:
-        raise NotImplementedError
-
-    def to_callable(self, params: np.ndarray) -> Callable[[np.ndarray], np.ndarray]:
         raise NotImplementedError

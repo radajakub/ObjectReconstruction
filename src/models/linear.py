@@ -1,5 +1,4 @@
 import numpy as np
-from typing import Callable
 import toolbox as tb
 
 from models.model import Model

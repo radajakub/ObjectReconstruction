@@ -1,4 +1,3 @@
-from typing import Callable
 import numpy as np
 from models import Model, Linear
 from plotter import Plotter
@@ -19,11 +18,10 @@ class RANSAC:
         self.inliers = None
 
     def _criterion(self, w: float) -> int:
-        return np.log(
-            1 - self.p) / np.log(1 - np.power(w, self.model.min_samples))
+        return np.log(1 - self.p) / np.log(1 - np.power(w, self.model.min_samples))
 
     def fit(self, X: np.ndarray) -> None:
-        self.result = None
+        self.estimate = None
         self.inliers = None
 
         self.it = 0
@@ -56,33 +54,30 @@ class RANSAC:
                 Nmax = self._criterion(Ni / N)
 
         # fit to best inliers
-        M = self.model.hypothesis(
-            X[:, self.model.error(best_M, X) < self.threshold])
+        M = self.model.hypothesis(X[:, self.model.error(best_M, X) < self.threshold])
 
         self.estimate = M
-        self.inliers = X[:, self.model.error(
-            self.estimate, X) < self.threshold]
+        self.inliers = X[:, self.model.error(self.estimate, X) < self.threshold]
 
 
 if __name__ == "__main__":
     print('Testing RANSAC on line fitting...')
-    X = np.loadtxt('test_data/ransac.txt').T
+    X = np.loadtxt('data/ransac/ransac.txt').T
     orig_line = np.array([-10, 3, 1200])[:, np.newaxis]
 
-    plotter = Plotter(rows=1, cols=2, hide_axes=True,
-                      invert_yaxis=False, aspect_equal=True, labels=[['Only points', 'Points with fitted line']])
+    plotter = Plotter(rows=1, cols=2, hide_axes=True, invert_yaxis=False, aspect_equal=True)
+    plotter.set_title('Only points', row=1, col=1)
+    plotter.set_title('Points with fitted line', row=1, col=2)
     plotter.add_points(X, col=1)
     plotter.add_line(orig_line, col=1, color='red')
     plotter.add_points(X, col=2)
     plotter.add_line(orig_line, col=2, color='red')
 
-    ransac = RANSAC(model=Linear(), max_iterations=1000,
-                    threshold=3, p=0.999, rng=np.random.default_rng(0))
+    ransac = RANSAC(model=Linear(), max_iterations=1000, threshold=3, p=0.999, rng=np.random.default_rng(0))
 
     ransac.fit(X)
     plotter.add_line(ransac.estimate, col=2, color='blue')
 
-    print(
-        f'RANSAC in {ransac.it} iterations found line with parameters: {ransac.estimate.flatten()}')
+    print(f'RANSAC in {ransac.it} iterations found line with parameters: {ransac.estimate.flatten()}')
 
     plotter.show()
