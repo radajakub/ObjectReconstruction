@@ -7,34 +7,36 @@ from logger import Logger, LogEntry
 from config import Config
 
 
+class EpipolarEstimate:
+    def __init__(self, E: np.ndarray, R: np.ndarray, t: np.ndarray, inlier_indices: np.ndarray) -> None:
+        self.E = E
+        self.R = R
+        self.t = t
+        self.inlier_indices = inlier_indices
+
+
 class EpipolarEstimator(RANSAC):
     def __init__(self, K: np.ndarray, threshold: float = Config.default_threshold, p: float = Config.default_p, max_iterations: int = Config.default_max_iter, rng: np.random.Generator = None, logger: Logger = None) -> None:
         super().__init__(model=EssentialMatrix(K), threshold=threshold,
                          p=p, max_iterations=max_iterations, rng=rng)
         self.logger = logger
 
-    def compute_epipolar_lines(self, x1: np.ndarray, x2: np.ndarray) -> np.ndarray:
-        if self.estimate is None:
-            raise AttributeError("estimate not computed yet")
-        F = self.model.get_fundamental(self.estimate)
+    def compute_epipolar_lines(self, estimate: EpipolarEstimate, x1: np.ndarray, x2: np.ndarray) -> np.ndarray:
+        F = self.model.get_fundamental(estimate.E)
         l1 = F.T @ tb.e2p(x2[:, np.newaxis])
         l2 = F @ tb.e2p(x1[:, np.newaxis])
         return l1, l2
 
-    def fit(self, X1: np.ndarray, X2: np.ndarray) -> None:
+    def fit(self, X1: np.ndarray, X2: np.ndarray) -> EpipolarEstimate:
         assert (X1.shape == X2.shape)
         X1 = tb.e2p(X1)
         X2 = tb.e2p(X2)
-
-        self.estimate = None
-        self.inliers = None
 
         self.it = 0
         Nmax = np.inf
 
         best_supp = 0
-        best_E = None
-        best_inlier_indices = None
+        best_estimate = None
         N = X1.shape[1]
 
         while self.it <= Nmax and self.it < self.max_iterations:
@@ -86,12 +88,10 @@ class EpipolarEstimator(RANSAC):
 
                 if supp > best_supp:
                     best_supp = supp
-                    best_E = E
-                    best_inlier_indices = visible_indices
+                    best_estimate = EpipolarEstimate(E, R, t, visible_indices)
                     Nmax = self._criterion(Ni / N)
                     self.logger.log_improve(LogEntry(iteration=self.it, inliers=inlier_indices.shape[0], support=supp, visible=Ni, Nmax=Nmax))
 
                 self.logger.log(LogEntry(iteration=self.it, inliers=inlier_indices.shape[0], support=supp, visible=Ni, Nmax=Nmax))
 
-        self.estimate = best_E
-        self.inliers = best_inlier_indices
+        return best_estimate

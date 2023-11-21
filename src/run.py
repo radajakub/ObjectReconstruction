@@ -23,11 +23,11 @@ if __name__ == "__main__":
     corr1, corr2 = loader.get_corresp(config.img1, config.img2)
 
     estimator = EpipolarEstimator(K=loader.K, threshold=config.threshold, p=config.p, max_iterations=config.max_iter, rng=rng, logger=logger)
-    estimator.fit(corr1, corr2)
+    estimate = estimator.fit(corr1, corr2)
 
-    E = estimator.estimate
+    E = estimate.E
     mask = np.zeros(corr1.shape[1], dtype=bool)
-    mask[estimator.inliers] = True
+    mask[estimate.inlier_indices] = True
     corr_in = [corr1[:, mask], corr2[:, mask]]
     corr_out = [corr1[:, ~mask], corr2[:, ~mask]]
 
@@ -56,7 +56,7 @@ if __name__ == "__main__":
 
     # plot epipolar lines and points
     for c, k in enumerate(range(0, n_inliers, n_inliers // n_epipolar_lines)):
-        ls = estimator.compute_epipolar_lines(corr_in[0][:, k], corr_in[1][:, k])
+        ls = estimator.compute_epipolar_lines(estimate, corr_in[0][:, k], corr_in[1][:, k])
         color = plotter.get_color(c)
         for i, l in enumerate(ls):
             r = i + 1
