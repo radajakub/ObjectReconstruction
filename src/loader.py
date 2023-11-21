@@ -62,12 +62,14 @@ class DataLoader:
 
         # load correspondences and filter data points for each pair of images
         self.corresp = {}
+        self.corres = {}
         for i in range(self.image_num):
             for j in range(i + 1, self.image_num):
                 key = _image_key(self.image_ids[i], self.image_ids[j])
                 img1, img2 = key
                 if img1 != img2 and key not in self.corresp:
                     correspondences = _get_correspondences(path, img1, img2)
+                    self.corres[key] = (correspondences[0, :], correspondences[1, :])
                     d1 = self.points[img1][:, correspondences[0, :]]
                     d2 = self.points[img2][:, correspondences[1, :]]
                     self.corresp[key] = (d1, d2)

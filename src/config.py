@@ -2,7 +2,7 @@ from loader import DataLoader
 
 
 class Config:
-    default_threshold = 5
+    default_threshold = 3
     default_p = 0.9999
     default_max_iter = 1000
 

@@ -17,7 +17,7 @@ class EssentialMatrix(Model):
         return p5.p5gb(X1, X2)
 
     def error(self, E: np.ndarray, X1: np.ndarray, X2: np.ndarray) -> np.ndarray:
-        return np.sqrt(tb.err_F_sampson(self.get_fundamental(E), X1, X2))
+        return np.sqrt(tb.err_F_sampson(self.get_fundamental(E), self.apply_K(X1), self.apply_K(X2)))
 
     def support(self, inlier_errors: np.ndarray, threshold: float) -> int:
         return np.sum(1 - np.power(inlier_errors, 2) / np.power(threshold, 2))

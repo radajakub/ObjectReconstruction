@@ -51,8 +51,8 @@ class EpipolarEstimator(RANSAC):
 
     def fit(self, X1: np.ndarray, X2: np.ndarray) -> EpipolarEstimate:
         assert (X1.shape == X2.shape)
-        X1 = tb.e2p(X1)
-        X2 = tb.e2p(X2)
+        X1 = self.model.unapply_K(tb.e2p(X1))
+        X2 = self.model.unapply_K(tb.e2p(X2))
 
         self.it = 0
         Nmax = np.inf
@@ -66,8 +66,8 @@ class EpipolarEstimator(RANSAC):
 
             # sample
             sample_indices = self.rng.choice(N, self.model.min_samples, replace=False)
-            X1_sample = self.model.unapply_K(X1[:, sample_indices])
-            X2_sample = self.model.unapply_K(X2[:, sample_indices])
+            X1_sample = X1[:, sample_indices]
+            X2_sample = X2[:, sample_indices]
 
             # construct hypothesis
             Es = self.model.hypothesis(X1_sample, X2_sample)
@@ -94,11 +94,9 @@ class EpipolarEstimator(RANSAC):
                 inlier_indices = np.arange(X1.shape[1])[inliers]
 
                 # check visibility of inliers
-                P1 = np.eye(3, 4)
-                P2 = np.hstack((R, t))  # rotated and moved camera
-                X1_ = self.model.unapply_K(X1[:, inliers])
-                X2_ = self.model.unapply_K(X2[:, inliers])
-                X = tb.Pu2X(P1, P2, X1_, X2_)
+                P1 = self.model.apply_K(np.eye(3, 4))
+                P2 = self.model.apply_K(np.hstack((R, t)))  # rotated and moved camera
+                X = tb.Pu2X(P1, P2, X1[:, inliers], X2[:, inliers])
                 X = tb.e2p(tb.p2e(X))
                 u1p = P1 @ X
                 u2p = P2 @ X
