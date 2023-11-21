@@ -6,7 +6,7 @@ import os
 from ransac import RANSAC, Estimate
 from models import EssentialMatrix
 import toolbox as tb
-from logger import Logger, LogEntry
+from logger import Logger, EpipolarEstimateLogEntry
 from config import Config
 
 DATAFOLDER = 'data'
@@ -87,7 +87,7 @@ class EpipolarEstimator(RANSAC):
                 inlier_eps = eps[inliers]
                 supp = self.model.support(inlier_eps, threshold=self.threshold)
                 if supp <= best_supp:
-                    self.logger.log(LogEntry(iteration=self.it, inliers=inliers.sum(), support=supp, visible=-1, Nmax=Nmax))
+                    self.logger.log(EpipolarEstimateLogEntry(iteration=self.it, inliers=inliers.sum(), support=supp, visible=-1, Nmax=Nmax))
                     continue
 
                 # compute inlier indices
@@ -112,8 +112,8 @@ class EpipolarEstimator(RANSAC):
                     best_supp = supp
                     best_estimate = EpipolarEstimate(E, R, t, visible_indices)
                     Nmax = self._criterion(Ni / N)
-                    self.logger.log_improve(LogEntry(iteration=self.it, inliers=inlier_indices.shape[0], support=supp, visible=Ni, Nmax=Nmax))
+                    self.logger.log_improve(EpipolarEstimateLogEntry(iteration=self.it, inliers=inlier_indices.shape[0], support=supp, visible=Ni, Nmax=Nmax))
 
-                self.logger.log(LogEntry(iteration=self.it, inliers=inlier_indices.shape[0], support=supp, visible=Ni, Nmax=Nmax))
+                self.logger.log(EpipolarEstimateLogEntry(iteration=self.it, inliers=inlier_indices.shape[0], support=supp, visible=Ni, Nmax=Nmax))
 
         return best_estimate
