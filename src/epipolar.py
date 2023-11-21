@@ -3,20 +3,24 @@ from __future__ import annotations
 import numpy as np
 import os
 
-from ransac import RANSAC
+from ransac import RANSAC, Estimate
 from models import EssentialMatrix
 import toolbox as tb
 from logger import Logger, LogEntry
 from config import Config
 
+DATAFOLDER = 'data'
 
-class EpipolarEstimate:
+
+class EpipolarEstimate(Estimate):
     @staticmethod
     def load(folder: str) -> EpipolarEstimate:
-        E = np.loadtxt(os.path.join(folder, 'E.txt'))
-        R = np.loadtxt(os.path.join(folder, 'R.txt'))
-        t = np.loadtxt(os.path.join(folder, 't.txt'))
-        inliers = np.loadtxt(os.path.join(folder, 'inliers.txt'), dtype=int)
+        if not (os.path.exists(os.path.join(folder, DATAFOLDER)) and os.path.isdir(os.path.join(folder, DATAFOLDER))):
+            raise FileNotFoundError(f'folder {folder} does not exist or is not a directory')
+        E = np.loadtxt(os.path.join(folder, DATAFOLDER, 'E.txt'))
+        R = np.loadtxt(os.path.join(folder, DATAFOLDER, 'R.txt'))
+        t = np.loadtxt(os.path.join(folder, DATAFOLDER, 't.txt'))
+        inliers = np.loadtxt(os.path.join(folder, DATAFOLDER, 'inliers.txt'), dtype=int)
         return EpipolarEstimate(E, R, t, inliers)
 
     def __init__(self, E: np.ndarray, R: np.ndarray, t: np.ndarray, inlier_indices: np.ndarray) -> None:
@@ -27,10 +31,10 @@ class EpipolarEstimate:
 
     def save(self, folder: str) -> None:
         os.makedirs(folder, exist_ok=True)
-        np.savetxt(os.path.join(folder, 'E.txt'), self.E)
-        np.savetxt(os.path.join(folder, 'R.txt'), self.R)
-        np.savetxt(os.path.join(folder, 't.txt'), self.t)
-        np.savetxt(os.path.join(folder, 'inliers.txt'), self.inlier_indices)
+        np.savetxt(os.path.join(folder, DATAFOLDER, 'E.txt'), self.E)
+        np.savetxt(os.path.join(folder, DATAFOLDER, 'R.txt'), self.R)
+        np.savetxt(os.path.join(folder, DATAFOLDER, 't.txt'), self.t)
+        np.savetxt(os.path.join(folder, DATAFOLDER, 'inliers.txt'), self.inlier_indices)
 
 
 class EpipolarEstimator(RANSAC):

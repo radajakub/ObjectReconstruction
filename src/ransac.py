@@ -1,6 +1,31 @@
+from __future__ import annotations
+
+import os
+
 import numpy as np
 from models import Model, Linear
 from plotter import Plotter
+
+DATAFOLDER = 'data'
+
+
+class Estimate:
+    @staticmethod
+    def load(folder: str) -> Estimate:
+        if not (os.path.exists(os.path.join(folder, DATAFOLDER)) and os.path.isdir(os.path.join(folder, DATAFOLDER))):
+            raise FileNotFoundError(f'folder {folder} does not exist or is not a directory')
+        M = np.loadtxt(os.path.join(folder, DATAFOLDER, 'M.txt'))
+        inliers = np.loadtxt(os.path.join(folder, DATAFOLDER, 'inliers.txt'), dtype=int)
+        return Estimate(M, inliers)
+
+    def __init__(self, M: np.ndarray, inlier_indices: np.ndarray) -> None:
+        self.M = M
+        self.inlier_indices = inlier_indices
+
+    def save(self, folder: str) -> None:
+        os.makedirs(folder, exist_ok=True)
+        np.savetxt(os.path.join(folder, DATAFOLDER, 'M.txt'), self.M)
+        np.savetxt(os.path.join(folder, DATAFOLDER, 'inliers.txt'), self.inlier_indices)
 
 
 class RANSAC:
@@ -14,16 +39,10 @@ class RANSAC:
         else:
             self.rng = np.random.default_rng()
 
-        self.estimate = None
-        self.inliers = None
-
     def _criterion(self, w: float) -> int:
         return np.log(1 - self.p) / np.log(1 - np.power(w, self.model.min_samples))
 
     def fit(self, X: np.ndarray) -> None:
-        self.estimate = None
-        self.inliers = None
-
         self.it = 0
         Nmax = 1
 
@@ -54,10 +73,9 @@ class RANSAC:
                 Nmax = self._criterion(Ni / N)
 
         # fit to best inliers
-        M = self.model.hypothesis(X[:, self.model.error(best_M, X) < self.threshold])
+        best_M = self.model.hypothesis(X[:, self.model.error(best_M, X) < self.threshold])
 
-        self.estimate = M
-        self.inliers = X[:, self.model.error(self.estimate, X) < self.threshold]
+        return Estimate(best_M, X[:, self.model.error(best_M, X) < self.threshold])
 
 
 if __name__ == "__main__":
@@ -75,9 +93,9 @@ if __name__ == "__main__":
 
     ransac = RANSAC(model=Linear(), max_iterations=1000, threshold=3, p=0.999, rng=np.random.default_rng(0))
 
-    ransac.fit(X)
-    plotter.add_line(ransac.estimate, col=2, color='blue')
+    estimate = ransac.fit(X)
+    plotter.add_line(estimate.M, col=2, color='blue')
 
-    print(f'RANSAC in {ransac.it} iterations found line with parameters: {ransac.estimate.flatten()}')
+    print(f'RANSAC in {ransac.it} iterations found line with parameters: {estimate.M.flatten()}')
 
     plotter.show()
