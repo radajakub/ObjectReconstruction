@@ -71,7 +71,7 @@ def Pu2X(P1: np.ndarray, P2: np.ndarray, X1: np.ndarray, X2: np.ndarray) -> np.n
         u2, v2 = x2
         D = np.array([u1 * p13 - p11, v1 * p13 - p12, u2 * p23 - p21, v2 * p23 - p22])
         _, _, Vt = np.linalg.svd(D.T @ D)
-        X[:, i] = Vt.T[:, -1]
+        X[:, i] = Vt[-1, :]
 
     return X
 
@@ -92,14 +92,56 @@ def err_F_sampson(F: np.ndarray, u1: np.ndarray, u2: np.ndarray) -> np.ndarray:
     return err
 
 
+def u_correct_sampson(F: np.ndarray, u1: np.ndarray, u2: np.ndarray) -> np.ndarray:
+    assert (F.shape == (3, 3))
+    assert (u1.shape[0] == 3)
+    assert (u2.shape[0] == 3)
+    assert (u1.shape[1] == u2.shape[1])
+    S = np.array([[1, 0, 0], [0, 1, 0]])
+    SF = S @ F
+    SFT = S @ F.T
+    Frow1 = F[0, :]
+    Frow2 = F[1, :]
+    Fcol1 = F[:, 0]
+    Fcol2 = F[:, 1]
+
+    U1 = p2e(u1)
+    U2 = p2e(u2)
+    X = e2p(U1)
+    Y = e2p(U2)
+
+    nu1 = np.zeros(U1.shape)
+    nu2 = np.zeros(U2.shape)
+    for i in range(U1.shape[1]):
+        x = X[:, i]
+        y = Y[:, i]
+        u1 = U1[:, i]
+        u2 = U2[:, i]
+        corr = (y.T @ F @ x) / (np.sum(np.power(SF @ x, 2)) + np.sum(np.power(SFT @ y, 2)))
+        nu1[:, i] = u1 - corr * np.array([np.dot(Fcol1.T, y), np.dot(Fcol2.T, y)])
+        nu2[:, i] = u2 - corr * np.array([np.dot(Frow1.T, x), np.dot(Frow2.T, x)])
+
+    return e2p(nu1), e2p(nu2)
+
+
 if __name__ == '__main__':
     def test(args, result, expected, title):
-        correct = np.all(np.isclose(result, expected, rtol=1e-04, atol=1e-04))
+        correct = np.all(np.isclose(result, expected, rtol=1e-08, atol=1e-04))
         print(f'-- test {title} {"yes" if correct else "no"}')
         if not correct:
             print(f'input: {args}')
             print(f'result: {result}')
             print(f'expected: {expected}')
+
+    def test_tuple(args, result, expected1, expected2, title):
+        result1, result2 = result
+        correct1 = np.all(np.isclose(result1, expected1, rtol=1e-08, atol=1e-04))
+        correct2 = np.all(np.isclose(result2, expected2, rtol=1e-08, atol=1e-04))
+        print(f'-- test {title} {"yes" if correct1 and correct2 else "no"}')
+        if not (correct1 and correct2):
+            print(f'errors:')
+            print(f'{result1 - expected1}')
+            print(f'{result2 - expected2}')
 
     xe2p = np.array([[1, 3, 5], [2, 4, 6]])
     xe2pres = np.array([[1, 3, 5], [2, 4, 6], [1, 1, 1]])
@@ -166,3 +208,24 @@ if __name__ == '__main__':
     res = np.array([1.17767014e-25, 3.65496535e-26, 3.73504673e+00, 1.36240281e+01, 4.01348396e+00,
                    2.44827498e+01, 3.49805517e+00, 2.55861025e+01, 3.00939701e+01, 6.12625549e-01])
     test([], err_F_sampson(F, u1, u2), res, 'sampson')
+
+    # test u_correct_sampson
+    nu1 = np.array([[8.93550177e+02, 5.47967999e+02, 4.92770914e+02, 8.21703870e+02,
+                     8.68951974e+02, 9.13985882e+02, 8.13061386e+02, 6.96077787e+02,
+                     1.02015983e+03, 6.63220594e+02],
+                    [5.84709371e+02, 4.66298851e+02, 8.62827609e+02, 6.82425001e+02,
+                     8.98279193e+02, 4.36198454e+02, 6.10488734e+02, 7.64081942e+02,
+                     6.87488707e+02, 5.84822004e+02],
+                    [1.00000000e+00, 1.00000000e+00, 1.00000000e+00, 1.00000000e+00,
+                     1.00000000e+00, 1.00000000e+00, 1.00000000e+00, 1.00000000e+00,
+                     1.00000000e+00, 1.00000000e+00]])
+    nu2 = np.array([[1.61710562e+03, 1.18036628e+03, 1.29600610e+03, 1.56973669e+03,
+                     1.75099730e+03, 1.55924726e+03, 1.52423927e+03, 1.45519746e+03,
+                     1.82681674e+03, 1.34906834e+03],
+                    [1.11065284e+03, 1.09239888e+03, 1.59565727e+03, 1.24481493e+03,
+                     1.50975807e+03, 9.27707894e+02, 1.16085726e+03, 1.38512496e+03,
+                     1.19500104e+03, 1.18558633e+03],
+                    [1.00000000e+00, 1.00000000e+00, 1.00000000e+00, 1.00000000e+00,
+                     1.00000000e+00, 1.00000000e+00, 1.00000000e+00, 1.00000000e+00,
+                     1.00000000e+00, 1.00000000e+00]])
+    test_tuple([], u_correct_sampson(F, u1, u2), nu1, nu2, 'sampson correct')
