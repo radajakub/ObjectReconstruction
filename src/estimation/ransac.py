@@ -4,7 +4,7 @@ import os
 
 import numpy as np
 from models import Model, Linear
-from plotter import Plotter
+from data import Plotter
 
 DATAFOLDER = 'data'
 

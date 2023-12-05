@@ -1,11 +1,10 @@
 import sys
 import numpy as np
 
-from plotter import Plotter
-from loader import DataLoader
-from epipolar import EpipolarEstimator
-from config import Config
-from logger import Logger
+from data import Plotter, DataLoader, Logger
+from data import DataLoader
+from estimation import EpipolarEstimator
+from utils import Config
 
 
 if __name__ == "__main__":

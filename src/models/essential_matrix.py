@@ -3,7 +3,7 @@ import numpy as np
 import p5
 
 from models.model import Model
-import toolbox as tb
+import utils.toolbox as tb
 
 
 class EssentialMatrix(Model):

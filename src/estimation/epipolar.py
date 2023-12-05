@@ -3,11 +3,11 @@ from __future__ import annotations
 import numpy as np
 import os
 
-from ransac import RANSAC, Estimate
+from .ransac import RANSAC, Estimate
 from models import EssentialMatrix
-import toolbox as tb
-from logger import Logger, EpipolarEstimateLogEntry
-from config import Config
+import utils.toolbox as tb
+from data import Logger, EpipolarEstimateLogEntry
+from utils import Config
 
 DATAFOLDER = 'data'
 

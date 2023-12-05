@@ -1,4 +1,4 @@
-from loader import DataLoader
+from data import DataLoader
 
 
 class Config:

@@ -1,5 +1,5 @@
 import numpy as np
-import toolbox as tb
+import utils.toolbox as tb
 
 from models.model import Model
 

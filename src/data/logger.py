@@ -1,8 +1,7 @@
-from enum import Enum
 import time
 
-from config import Config
-from loader import DataLoader
+from utils import Config
+from data import DataLoader
 
 
 class LogEntry:
