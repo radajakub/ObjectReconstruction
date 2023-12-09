@@ -1,5 +1,6 @@
 import numpy as np
-from data import Plotter, Logger
+
+from inout import Plotter, Logger
 from estimation import RANSAC
 from models import Linear
 

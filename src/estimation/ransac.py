@@ -4,7 +4,7 @@ import os
 
 import numpy as np
 from models import Model
-from data import Logger, RANSACLogEntry
+from inout import Logger, RANSACLogEntry
 
 
 class Estimate:

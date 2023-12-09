@@ -1,7 +1,7 @@
 import sys
 import numpy as np
 
-from data import DataLoader, Logger
+from inout import DataLoader, Logger
 from utils import Config
 
 if __name__ == "__main__":

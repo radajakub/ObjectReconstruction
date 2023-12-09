@@ -6,7 +6,7 @@ import os
 from .ransac import RANSAC, Estimate
 from models import EssentialMatrix
 import utils.toolbox as tb
-from data import Logger, EpipolarEstimateLogEntry
+from inout import Logger, EpipolarEstimateLogEntry
 from utils import Config
 
 
