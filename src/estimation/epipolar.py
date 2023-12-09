@@ -21,11 +21,38 @@ class EpipolarEstimate(Estimate):
         inliers = np.loadtxt(os.path.join(folder, 'inliers.txt'), dtype=int)
         return EpipolarEstimate(E, R, t, inliers)
 
-    def __init__(self, E: np.ndarray, R: np.ndarray, t: np.ndarray, inlier_indices: np.ndarray) -> None:
+    def __init__(self, model: EssentialMatrix, E: np.ndarray, R: np.ndarray, t: np.ndarray, inlier_indices: np.ndarray) -> None:
+        self.model = model
         self.E = E
         self.R = R
         self.t = t
         self.inlier_indices = inlier_indices
+
+    def _get_mask(self, n: int) -> np.ndarray:
+        mask = np.zeros(n, dtype=bool)
+        mask[self.inlier_indices] = True
+        return mask
+
+    def get_cameras(self) -> tuple[np.ndarray, np.ndarray]:
+        return self.model.apply_K(np.eye(3, 4)), self.model.apply_K(np.hstack((self.R, self.t)))
+
+    def get_inliers(self, corr1: np.ndarray, corr2: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        mask = self._get_mask(corr1.shape[1])
+        return corr1[:, mask], corr2[:, mask]
+
+    def get_outliers(self, corr1: np.ndarray, corr2: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        mask = self._get_mask(corr1.shape[1])
+        return corr1[:, ~mask], corr2[:, ~mask]
+
+    def __str__(self) -> str:
+        res = 'EpipolarEstimate\n'
+        res += 'E:\n'
+        res += self.E.__str__() + '\n'
+        res += 'R:\n'
+        res += self.R.__str__() + '\n'
+        res += 't:\n'
+        res += self.t.__str__() + '\n'
+        return res
 
     def save(self, folder: str) -> None:
         os.makedirs(folder, exist_ok=True)
@@ -107,7 +134,7 @@ class EpipolarEstimator(RANSAC):
 
                 if supp > best_supp:
                     best_supp = supp
-                    best_estimate = EpipolarEstimate(E, R, t, visible_indices)
+                    best_estimate = EpipolarEstimate(self.model, E, R, t, visible_indices)
                     Nmax = self._criterion(Ni / N)
                     self.logger.log_improve(EpipolarEstimateLogEntry(
                         iteration=self.it, inliers=inlier_indices.shape[0], support=supp, visible=Ni, Nmax=Nmax))

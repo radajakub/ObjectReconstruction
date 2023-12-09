@@ -53,7 +53,8 @@ class Plotter:
         ends = ends[:, indices]
 
         self.add_points(starts, color=color, size=size, row=row, col=col)
-        self.get_ax(row, col).plot([starts[0, :], ends[0, :]], [starts[1, :], ends[1, :]], color=color, linewidth=linewidth)
+        self.get_ax(row, col).plot([starts[0, :], ends[0, :]], [
+            starts[1, :], ends[1, :]], color=color, linewidth=linewidth)
 
     def _get_line_intersections(self, line: np.ndarray, row: int = 1, col: int = 1):
         ax = self.get_ax(row, col)
@@ -77,6 +78,29 @@ class Plotter:
         ax = self.get_ax(row, col)
         intersections = self._get_line_intersections(normal.squeeze(), row, col)
         ax.plot(intersections[0, :], intersections[1, :], color=color, linewidth=linewidth)
+
+    def show(self):
+        plt.show()
+
+    def save(self, outfile: str):
+        self.fig.savefig(outfile, bbox_inches='tight')
+
+
+class Plotter3D:
+    def __init__(self, hide_axes: bool = True, invert_yaxis: bool = True, aspect_equal: bool = False):
+        self.fig = plt.figure()
+        self.ax = self.fig.add_subplot(projection='3d')
+        self.cmap = plt.cm.get_cmap('tab10')
+        if hide_axes:
+            self.ax.axis('off')
+        if invert_yaxis:
+            self.ax.invert_yaxis()
+        if aspect_equal:
+            self.ax.set_aspect("equal", adjustable="box")
+
+    def add_points(self, X: np.ndarray, color: str = 'black', marker='o', size: float = 1.0):
+        assert X.shape[0] == 3
+        self.ax.scatter(X[0, :], X[1, :], X[2, :], s=size, facecolors=color, edgecolors=color, marker=marker)
 
     def show(self):
         plt.show()

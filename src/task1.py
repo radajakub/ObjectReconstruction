@@ -26,11 +26,8 @@ if __name__ == "__main__":
                                   max_iterations=config.max_iter, rng=rng, logger=logger)
     estimate = estimator.fit(corr1, corr2)
 
-    E = estimate.E
-    mask = np.zeros(corr1.shape[1], dtype=bool)
-    mask[estimate.inlier_indices] = True
-    corr_in = [corr1[:, mask], corr2[:, mask]]
-    corr_out = [corr1[:, ~mask], corr2[:, ~mask]]
+    corr_in = estimate.get_inliers(corr1, corr2)
+    corr_out = estimate.get_outliers(corr1, corr2)
 
     images = [config.img1, config.img2]
     cols = 3
@@ -72,5 +69,4 @@ if __name__ == "__main__":
         plotter.show()
     else:
         os.makedirs(config.outpath, exist_ok=True)
-        estimate.save(folder=config.outpath)
         plotter.save(outfile=os.path.join(config.outpath, 'img.png'))
