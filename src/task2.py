@@ -1,12 +1,8 @@
 import sys
 import numpy as np
 
-from plotter import Plotter
-from loader import DataLoader
-from epipolar import EpipolarEstimator
-from config import Config
-from logger import Logger
-
+from data import DataLoader, Logger
+from utils import Config
 
 if __name__ == "__main__":
     config = Config(sys.argv)

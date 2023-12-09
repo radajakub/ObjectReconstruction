@@ -9,18 +9,16 @@ import utils.toolbox as tb
 from data import Logger, EpipolarEstimateLogEntry
 from utils import Config
 
-DATAFOLDER = 'data'
-
 
 class EpipolarEstimate(Estimate):
     @staticmethod
     def load(folder: str) -> EpipolarEstimate:
-        if not (os.path.exists(os.path.join(folder, DATAFOLDER)) and os.path.isdir(os.path.join(folder, DATAFOLDER))):
+        if not (os.path.exists(folder) and os.path.isdir(folder)):
             raise FileNotFoundError(f'folder {folder} does not exist or is not a directory')
-        E = np.loadtxt(os.path.join(folder, DATAFOLDER, 'E.txt'))
-        R = np.loadtxt(os.path.join(folder, DATAFOLDER, 'R.txt'))
-        t = np.loadtxt(os.path.join(folder, DATAFOLDER, 't.txt'))
-        inliers = np.loadtxt(os.path.join(folder, DATAFOLDER, 'inliers.txt'), dtype=int)
+        E = np.loadtxt(os.path.join(folder, 'E.txt'))
+        R = np.loadtxt(os.path.join(folder, 'R.txt'))
+        t = np.loadtxt(os.path.join(folder, 't.txt'))
+        inliers = np.loadtxt(os.path.join(folder, 'inliers.txt'), dtype=int)
         return EpipolarEstimate(E, R, t, inliers)
 
     def __init__(self, E: np.ndarray, R: np.ndarray, t: np.ndarray, inlier_indices: np.ndarray) -> None:
@@ -31,10 +29,10 @@ class EpipolarEstimate(Estimate):
 
     def save(self, folder: str) -> None:
         os.makedirs(folder, exist_ok=True)
-        np.savetxt(os.path.join(folder, DATAFOLDER, 'E.txt'), self.E)
-        np.savetxt(os.path.join(folder, DATAFOLDER, 'R.txt'), self.R)
-        np.savetxt(os.path.join(folder, DATAFOLDER, 't.txt'), self.t)
-        np.savetxt(os.path.join(folder, DATAFOLDER, 'inliers.txt'), self.inlier_indices)
+        np.savetxt(os.path.join(folder, 'E.txt'), self.E)
+        np.savetxt(os.path.join(folder, 'R.txt'), self.R)
+        np.savetxt(os.path.join(folder, 't.txt'), self.t)
+        np.savetxt(os.path.join(folder, 'inliers.txt'), self.inlier_indices, fmt='%i')
 
 
 class EpipolarEstimator(RANSAC):
@@ -87,7 +85,8 @@ class EpipolarEstimator(RANSAC):
                 inlier_eps = eps[inliers]
                 supp = self.model.support(inlier_eps, threshold=self.threshold)
                 if supp <= best_supp:
-                    self.logger.log(EpipolarEstimateLogEntry(iteration=self.it, inliers=inliers.sum(), support=supp, visible=-1, Nmax=Nmax))
+                    self.logger.log(EpipolarEstimateLogEntry(iteration=self.it,
+                                    inliers=inliers.sum(), support=supp, visible=-1, Nmax=Nmax))
                     continue
 
                 # compute inlier indices
@@ -110,8 +109,10 @@ class EpipolarEstimator(RANSAC):
                     best_supp = supp
                     best_estimate = EpipolarEstimate(E, R, t, visible_indices)
                     Nmax = self._criterion(Ni / N)
-                    self.logger.log_improve(EpipolarEstimateLogEntry(iteration=self.it, inliers=inlier_indices.shape[0], support=supp, visible=Ni, Nmax=Nmax))
+                    self.logger.log_improve(EpipolarEstimateLogEntry(
+                        iteration=self.it, inliers=inlier_indices.shape[0], support=supp, visible=Ni, Nmax=Nmax))
 
-                self.logger.log(EpipolarEstimateLogEntry(iteration=self.it, inliers=inlier_indices.shape[0], support=supp, visible=Ni, Nmax=Nmax))
+                self.logger.log(EpipolarEstimateLogEntry(iteration=self.it,
+                                inliers=inlier_indices.shape[0], support=supp, visible=Ni, Nmax=Nmax))
 
         return best_estimate

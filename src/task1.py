@@ -1,4 +1,5 @@
 import sys
+import os
 import numpy as np
 
 from data import Plotter, DataLoader, Logger
@@ -16,12 +17,13 @@ if __name__ == "__main__":
     loader = DataLoader(config.scene)
     config.check_valid(loader)
 
-    logger = Logger(config=config, loader=loader)
+    logger = Logger(config=config)
     logger.intro()
 
     corr1, corr2 = loader.get_corresp(config.img1, config.img2)
 
-    estimator = EpipolarEstimator(K=loader.K, threshold=config.threshold, p=config.p, max_iterations=config.max_iter, rng=rng, logger=logger)
+    estimator = EpipolarEstimator(K=loader.K, threshold=config.threshold, p=config.p,
+                                  max_iterations=config.max_iter, rng=rng, logger=logger)
     estimate = estimator.fit(corr1, corr2)
 
     E = estimate.E
@@ -69,4 +71,6 @@ if __name__ == "__main__":
     if config.outpath is None:
         plotter.show()
     else:
-        plotter.save(outfile=config.outpath)
+        os.makedirs(config.outpath, exist_ok=True)
+        estimate.save(folder=config.outpath)
+        plotter.save(outfile=os.path.join(config.outpath, 'img.png'))
