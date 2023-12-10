@@ -21,6 +21,7 @@ if __name__ == "__main__":
     camera_gluer = CameraGluer(loader, point_cloud, threshold=config.threshold, p=config.p,
                                max_iterations=config.max_iter, rng=rng, logger=logger)
 
+    # exit(0)
     camera_gluer.initial(config.img1, config.img2)
 
     plotter = Plotter3D(hide_axes=True, invert_yaxis=False, aspect_equal=True)

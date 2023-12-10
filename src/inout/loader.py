@@ -70,9 +70,25 @@ class DataLoader:
                 if img1 != img2 and key not in self.corresp:
                     correspondences = _get_correspondences(path, img1, img2)
                     self.corres[key] = (correspondences[0, :], correspondences[1, :])
-                    d1 = self.points[img1][:, correspondences[0, :]]
-                    d2 = self.points[img2][:, correspondences[1, :]]
+                    d1 = self.get_points(img1, correspondences[0, :])
+                    d2 = self.get_points(img2, correspondences[1, :])
                     self.corresp[key] = (d1, d2)
+
+    # return correponding data points for given pair of images (img1, img2) in given order
+    def get_corresp(self, img1: int, img2: int) -> (np.ndarray, np.ndarray):
+        key = _image_key(img1, img2)
+        c1, c2 = self.corresp[key]
+        return (c1, c2) if (img1, img2) == key else (c2, c1)
+
+    # return correspondence indices for given pair of images (img1, img2) in given order
+    def get_corres(self, img1: int, img2: int) -> (np.ndarray, np.ndarray):
+        key = _image_key(img1, img2)
+        c1, c2 = self.corres[key]
+        return (c1, c2) if (img1, img2) == key else (c2, c1)
+
+    # return image points for given image and indices
+    def get_points(self, img: int, indices: np.ndarray) -> np.ndarray:
+        return self.points[img][:, indices]
 
     def __str__(self) -> str:
         s = f'Data of scene: {self.scene}\n'
@@ -85,9 +101,3 @@ class DataLoader:
         for key in self.corresp:
             s += f'-- {key}: {self.corresp[key][0].shape}\n'
         return s
-
-    # return correponding data points for given pair of images (img1, img2) in given order
-    def get_corresp(self, img1: int, img2: int) -> (np.ndarray, np.ndarray):
-        key = _image_key(img1, img2)
-        c1, c2 = self.corresp[key]
-        return (c1, c2) if (img1, img2) == key else (c2, c1)

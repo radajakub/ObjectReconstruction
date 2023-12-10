@@ -9,7 +9,7 @@ class PointCloud:
         self.points = None
         self.num_points = 0
 
-    def add(self, epipolar: EpipolarEstimate, corr1: np.ndarray, corr2: np.ndarray) -> None:
+    def add(self, epipolar: EpipolarEstimate, corr1: np.ndarray, corr2: np.ndarray) -> np.ndarray:
         if corr1.shape[0] == 2:
             corr1 = tb.e2p(corr1)
         if corr2.shape[0] == 2:
@@ -23,10 +23,15 @@ class PointCloud:
         P1, P2 = epipolar.get_cameras()
         points_3d = tb.Pu2X(P1.P, P2.P, corr1, corr2)
 
+        prev_l = 0 if self.points is None else self.points.shape[1]
+
         if self.points is None:
             self.points = points_3d
         else:
             self.points = np.hstack((self.points, points_3d))
+
+        curr_l = self.points.shape[1]
+        return np.arange(prev_l, curr_l)
 
     def get_points(self) -> np.ndarray:
         return tb.p2e(self.points)
