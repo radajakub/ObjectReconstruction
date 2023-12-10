@@ -53,12 +53,12 @@ class Config:
             raise ValueError(f'invalid image id -> must be between 1 and {loader.image_num} (including)')
 
     def __str__(self) -> str:
-        print('config:')
-        print(f'-- scene {self.scene} with images {self.img1} and {self.img2}')
-        print(f'-- seed {self.seed}')
-        print(f'-- save output image to {self.outpath}')
-        print(f'-- epipolar estimation params')
-        print(f'---- threshold {self.threshold}')
-        print(f'---- p {self.p}')
-        print(f'---- max_iter {self.max_iter}')
-        print()
+        res = 'config:'
+        res += f'-- scene {self.scene} with images {self.img1} and {self.img2}\n'
+        res += f'-- seed {self.seed}\n'
+        res += f'-- save output image to {self.outpath}\n'
+        res += f'-- epipolar estimation params\n'
+        res += f'---- threshold {self.threshold}\n'
+        res += f'---- p {self.p}\n'
+        res += f'---- max_iter {self.max_iter}\n'
+        return res
