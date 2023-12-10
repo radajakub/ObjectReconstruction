@@ -71,7 +71,6 @@ class RANSAC:
                 best_support = supp
                 best_M = Mk
                 Nmax = self._criterion(Ni / N)
-                self.logger.log_improve(RANSACLogEntry(self.it, Ni, supp, Nmax))
 
         # fit to best inliers
         best_M = self.model.hypothesis(X[:, self.model.error(best_M, X) < self.threshold])

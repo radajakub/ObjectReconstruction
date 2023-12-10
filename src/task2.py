@@ -4,8 +4,7 @@ import numpy as np
 
 from inout import DataLoader, Logger, Plotter3D
 from utils import Config
-from result import PointCloud
-from estimation import EpipolarEstimator
+from estimation import EpipolarEstimator, PointCloud, CameraGluer
 
 if __name__ == "__main__":
     config = Config(sys.argv)
@@ -19,22 +18,15 @@ if __name__ == "__main__":
     logger.intro()
 
     point_cloud = PointCloud()
+    camera_gluer = CameraGluer(loader, point_cloud, threshold=config.threshold, p=config.p,
+                               max_iterations=config.max_iter, rng=rng, logger=logger)
 
-    corr1, corr2 = loader.get_corresp(config.img1, config.img2)
+    camera_gluer.initial(config.img1, config.img2)
 
-    estimator = EpipolarEstimator(K=loader.K, threshold=config.threshold, p=config.p,
-                                  max_iterations=config.max_iter, rng=rng, logger=logger)
-    estimate = estimator.fit(corr1, corr2)
-
-    corr_in = estimate.get_inliers(corr1, corr2)
-    point_cloud.add(estimate, corr_in[0], corr_in[1])
-
-    plotter = Plotter3D()
-    plotter.add_points(point_cloud.get_points())
-
-    logger.dump()
-    logger.summary()
-    logger.outro()
+    plotter = Plotter3D(hide_axes=True, invert_yaxis=False, aspect_equal=True)
+    plotter.add_points(camera_gluer.point_cloud.get_points())
+    plotter.add_camera(camera_gluer.cameras[config.img1], color='red', show_plane=True)
+    plotter.add_camera(camera_gluer.cameras[config.img2], color='blue', show_plane=True)
 
     if config.outpath is None:
         plotter.show()

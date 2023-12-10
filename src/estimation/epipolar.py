@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import matplotlib.pyplot as plt
 import numpy as np
 import os
 
+from inout.plotter import Plotter3D
+
 from .ransac import RANSAC, Estimate
-from models import EssentialMatrix
+from models import EssentialMatrix, Camera
 import utils.toolbox as tb
 from inout import Logger, EpipolarEstimateLogEntry
 from utils import Config
@@ -33,8 +36,11 @@ class EpipolarEstimate(Estimate):
         mask[self.inlier_indices] = True
         return mask
 
-    def get_cameras(self) -> tuple[np.ndarray, np.ndarray]:
-        return self.model.apply_K(np.eye(3, 4)), self.model.apply_K(np.hstack((self.R, self.t)))
+    def get_camera(self) -> np.ndarray:
+        return self.model.apply_K(np.hstack((self.R, self.t)))
+
+    def get_cameras(self) -> tuple[Camera, Camera]:
+        return self.model.apply_K(np.eye(3, 4)), self.get_camera()
 
     def get_inliers(self, corr1: np.ndarray, corr2: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         mask = self._get_mask(corr1.shape[1])
@@ -120,13 +126,14 @@ class EpipolarEstimator(RANSAC):
                 inlier_indices = np.arange(X1.shape[1])[inliers]
 
                 # check visibility of inliers
-                P1 = self.model.apply_K(np.eye(3, 4))
-                P2 = self.model.apply_K(np.hstack((R, t)))  # rotated and moved camera
-                X = tb.Pu2X(P1, P2, X1[:, inliers], X2[:, inliers])
-                X = tb.e2p(tb.p2e(X))
+                # P1 = self.model.apply_K(np.eye(3, 4))
+                # P2 = self.model.apply_K(np.hstack((R, t)))  # rotated and moved camera
+                P1 = np.eye(3, 4)
+                P2 = np.hstack((R, t))  # rotated and moved camera
+                X = tb.Pu2X(P1, P2, X1[:, inlier_indices], X2[:, inlier_indices])
                 u1p = P1 @ X
                 u2p = P2 @ X
-                visible = np.logical_and(u1p[2] > 0, u2p[2] > 0)
+                visible = np.logical_and(u1p[2, :] > 0, u2p[2, :] > 0)
                 visible_indices = inlier_indices[visible]
 
                 supp = self.model.support(inlier_eps[visible], threshold=self.threshold)
@@ -136,8 +143,6 @@ class EpipolarEstimator(RANSAC):
                     best_supp = supp
                     best_estimate = EpipolarEstimate(self.model, E, R, t, visible_indices)
                     Nmax = self._criterion(Ni / N)
-                    self.logger.log_improve(EpipolarEstimateLogEntry(
-                        iteration=self.it, inliers=inlier_indices.shape[0], support=supp, visible=Ni, Nmax=Nmax))
 
                 self.logger.log(EpipolarEstimateLogEntry(iteration=self.it,
                                 inliers=inlier_indices.shape[0], support=supp, visible=Ni, Nmax=Nmax))

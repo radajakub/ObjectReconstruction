@@ -70,8 +70,8 @@ def Pu2X(P1: np.ndarray, P2: np.ndarray, X1: np.ndarray, X2: np.ndarray) -> np.n
         u1, v1 = x1
         u2, v2 = x2
         D = np.array([u1 * p13 - p11, v1 * p13 - p12, u2 * p23 - p21, v2 * p23 - p22])
-        _, _, Vt = np.linalg.svd(D.T @ D)
-        X[:, i] = Vt[-1, :]
+        _, _, Vt = np.linalg.svd(D.T @ D, full_matrices=False)
+        X[:, i] = Vt.T[:, -1] / Vt.T[-1, -1]
 
     return X
 
@@ -88,7 +88,8 @@ def err_F_sampson(F: np.ndarray, u1: np.ndarray, u2: np.ndarray) -> np.ndarray:
     u1 = e2p(p2e(u1))
     u2 = e2p(p2e(u2))
 
-    err = np.power(np.array([(yi.T @ F @ xi) / np.sqrt(np.sum(np.power(SF @ xi, 2)) + np.sum(np.power(SFT @ yi, 2))) for xi, yi in zip(u1.T, u2.T)]), 2)
+    err = np.power(np.array([(yi.T @ F @ xi) / np.sqrt(np.sum(np.power(SF @ xi, 2)) +
+                   np.sum(np.power(SFT @ yi, 2))) for xi, yi in zip(u1.T, u2.T)]), 2)
     return err
 
 

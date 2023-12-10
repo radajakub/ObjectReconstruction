@@ -3,6 +3,7 @@ from PIL import Image
 import numpy as np
 import utils.toolbox as tb
 from utils import is_in_range_approx
+from models import Camera
 
 
 class Plotter:
@@ -14,8 +15,7 @@ class Plotter:
                 ax.axis('off')
             if invert_yaxis:
                 ax.invert_yaxis()
-            if aspect_equal:
-                ax.set_aspect("equal", adjustable="box")
+        self.aspect_equal = aspect_equal
 
     def set_title(self, title: str = '', row: int = 1, col: int = 1):
         self.get_ax(row, col).set_title(title)
@@ -79,10 +79,17 @@ class Plotter:
         intersections = self._get_line_intersections(normal.squeeze(), row, col)
         ax.plot(intersections[0, :], intersections[1, :], color=color, linewidth=linewidth)
 
+    def _prepare(self):
+        if self.aspect_equal:
+            for ax in self.axes.flatten():
+                ax.set_aspect("equal", adjustable="box")
+
     def show(self):
+        self._prepare()
         plt.show()
 
     def save(self, outfile: str):
+        self._prepare()
         self.fig.savefig(outfile, bbox_inches='tight')
 
 
@@ -91,19 +98,36 @@ class Plotter3D:
         self.fig = plt.figure()
         self.ax = self.fig.add_subplot(projection='3d')
         self.cmap = plt.cm.get_cmap('tab10')
+        self.aspect_equal = aspect_equal
         if hide_axes:
             self.ax.axis('off')
         if invert_yaxis:
             self.ax.invert_yaxis()
-        if aspect_equal:
-            self.ax.set_aspect("equal", adjustable="box")
 
     def add_points(self, X: np.ndarray, color: str = 'black', marker='o', size: float = 1.0):
         assert X.shape[0] == 3
         self.ax.scatter(X[0, :], X[1, :], X[2, :], s=size, facecolors=color, edgecolors=color, marker=marker)
 
+    def add_camera(self, c: Camera, color: str = 'black', linewidth: float = 1.0, show_plane=False):
+        center, axis = c.decompose()
+        end = center + 5 * axis
+        xmin, xmax = self.ax.get_xlim()
+        ymin, ymax = self.ax.get_ylim()
+        if show_plane:
+            xx, yy = np.meshgrid(range(int(xmin), int(xmax)), range(int(ymin), int(ymax)))
+            d = -np.dot(center, axis)
+            zz = -(axis[0] * xx + axis[1] * yy + d) / axis[2]
+            self.ax.plot_surface(xx, yy, zz, color=color, alpha=0.5)
+        self.ax.plot([center[0], end[0]], [center[1], end[1]], [center[2], end[2]], color=color, linewidth=linewidth)
+
+    def _prepare(self):
+        if self.aspect_equal:
+            self.ax.set_aspect("equal", adjustable="box")
+
     def show(self):
+        self._prepare()
         plt.show()
 
     def save(self, outfile: str):
-        self.fig.savefig(outfile, bbox_inches='tight')
+        self._prepare()
+        self.fig.savefig(outfile, bbox_inches='tight', dpi=500)

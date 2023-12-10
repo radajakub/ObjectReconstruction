@@ -62,8 +62,6 @@ if __name__ == "__main__":
             plotter.add_line(l, color=color, linewidth=1, row=r, col=3)
 
     logger.dump()
-    logger.summary()
-    logger.outro()
 
     if config.outpath is None:
         plotter.show()

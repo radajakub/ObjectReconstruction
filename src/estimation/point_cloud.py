@@ -1,7 +1,7 @@
 import numpy as np
 
 import utils.toolbox as tb
-from estimation import EpipolarEstimate
+from .epipolar import EpipolarEstimate
 
 
 class PointCloud:
@@ -18,8 +18,7 @@ class PointCloud:
         assert (corr1.shape[0] == 3)
         assert (corr2.shape[0] == 3)
 
-        F = epipolar.model.get_fundamental(epipolar.E)
-        corr1, corr2 = tb.u_correct_sampson(F, corr1, corr2)
+        corr1, corr2 = tb.u_correct_sampson(epipolar.model.get_fundamental(epipolar.E), corr1, corr2)
 
         P1, P2 = epipolar.get_cameras()
         points_3d = tb.Pu2X(P1, P2, corr1, corr2)

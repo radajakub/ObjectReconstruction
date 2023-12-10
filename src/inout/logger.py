@@ -40,6 +40,17 @@ class RANSACLogEntry(LogEntry):
         return f'({self.label}) [{self.time} | it: {self.iteration}] inliers: {self.inliers}, support: {self.support}, Nmax: {self.Nmax}'
 
 
+class CameraGluerLogEntry(LogEntry):
+    def __init__(self, camera_ids: list[int]) -> None:
+        super().__init__(label='CameraGluer')
+        self.camera_ids = camera_ids
+
+    def __str__(self) -> None:
+        if len(self.camera_ids) == 2:
+            return f'({self.label}) [{self.time}] initialized with cameras {self.camera_ids[0]} and {self.camera_ids[1]}'
+        return f'({self.label}) [{self.time}] glued camera {self.camera_ids[0]}'
+
+
 class Logger:
     def __init__(self, config: Config = None) -> None:
         self.start_time = time.process_time()
@@ -58,34 +69,12 @@ class Logger:
     def log(self, entry: LogEntry) -> None:
         entry.add_timestamp(start_time=self.start_time)
         self.logs.append(entry)
-
-    def log_improve(self, entry: LogEntry) -> None:
-        entry.add_timestamp(start_time=self.start_time)
-        self.improves.append(entry)
+        if not self.config.silent:
+            print(entry)
 
     def intro(self) -> None:
-        if self.config is not None:
-            print('config:')
-            print(f'-- scene {self.config.scene} with images {self.config.img1} and {self.config.img2}')
-            print(f'-- seed {self.config.seed}')
-            print(f'-- save output image to {self.config.outpath}')
-            print(f'-- epipolar estimation params')
-            print(f'---- threshold {self.config.threshold}')
-            print(f'---- p {self.config.p}')
-            print(f'---- max_iter {self.config.max_iter}')
-            print()
-
-    def outro(self) -> None:
-        if len(self.logs):
-            print(f'solved in {self.logs[-1].iteration} iterations with best estimate')
-            print(self.improves[-1])
-            print()
-
-    def summary(self) -> None:
-        print('BEST ESTIMATES')
-        for log in self.improves:
-            print(log)
-        print()
+        if self.config is not None and not self.config.silent:
+            print(self.config)
 
     def dump(self) -> None:
         print('ESTIMATION')
