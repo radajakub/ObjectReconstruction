@@ -21,7 +21,7 @@ class PointCloud:
         corr1, corr2 = tb.u_correct_sampson(epipolar.model.get_fundamental(epipolar.E), corr1, corr2)
 
         P1, P2 = epipolar.get_cameras()
-        points_3d = tb.Pu2X(P1, P2, corr1, corr2)
+        points_3d = tb.Pu2X(P1.P, P2.P, corr1, corr2)
 
         if self.points is None:
             self.points = points_3d

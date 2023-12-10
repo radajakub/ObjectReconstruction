@@ -3,14 +3,15 @@ import numpy as np
 from .point_cloud import PointCloud
 from .ransac import RANSAC
 from .epipolar import EpipolarEstimator
+from .camera import Camera
 from utils import Config
 from inout import Logger, DataLoader, CameraGluerLogEntry
-from models import Camera
+from models import GlobalPose
 
 
 class CameraGluer(RANSAC):
     def __init__(self, loader: DataLoader, point_cloud: PointCloud, threshold: float = Config.default_threshold, p: float = Config.default_p, max_iterations: int = Config.default_max_iter, rng: np.random.Generator = None, logger: Logger = None) -> None:
-        super().__init__(model=Camera(loader.K), threshold=threshold,
+        super().__init__(model=GlobalPose(loader.K), threshold=threshold,
                          p=p, max_iterations=max_iterations, rng=rng)
         self.logger = logger
         self.loader = loader
@@ -35,8 +36,8 @@ class CameraGluer(RANSAC):
         # Construct the cameras P1 and P2.
         # Put these cameras into the set of selected cameras.
         P1, P2 = estimate.get_cameras()
-        self.cameras[img1] = Camera(self.loader.K, P1)
-        self.cameras[img2] = Camera(self.loader.K, P2)
+        self.cameras[img1] = P1
+        self.cameras[img2] = P2
 
         # (5) Reconstruct the 3D point cloud using inlier correspondences between the images I1 and I2 using the cameras P1 and P2 (the points must be in front of both cameras)
         corr_in_1, corr_in_2 = estimate.get_inliers(corr1, corr2)

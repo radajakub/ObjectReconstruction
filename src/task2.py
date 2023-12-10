@@ -4,7 +4,7 @@ import numpy as np
 
 from inout import DataLoader, Logger, Plotter3D
 from utils import Config
-from estimation import EpipolarEstimator, PointCloud, CameraGluer
+from estimation import PointCloud, CameraGluer
 
 if __name__ == "__main__":
     config = Config(sys.argv)

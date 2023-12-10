@@ -3,7 +3,7 @@ from PIL import Image
 import numpy as np
 import utils.toolbox as tb
 from utils import is_in_range_approx
-from models import Camera
+from estimation import Camera
 
 
 class Plotter:

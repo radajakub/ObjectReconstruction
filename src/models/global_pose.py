@@ -4,10 +4,9 @@ from .model import Model
 from utils import toolbox as tb
 
 
-class Camera(Model):
-    def __init__(self, K: np.ndarray, P: np.ndarray = None) -> None:
+class GlobalPose(Model):
+    def __init__(self, K: np.ndarray) -> None:
         super().__init__(min_samples=3)
-        self.P = P
         self.K = K
         self.K_ = np.linalg.inv(K)
 
@@ -19,13 +18,6 @@ class Camera(Model):
 
     def support(self, inlier_errors: np.ndarray, threshold: float) -> int:
         return np.sum(1 - np.power(inlier_errors, 2) / np.power(threshold, 2))
-
-    def decompose(self) -> tuple[np.ndarray, np.ndarray]:
-        Rt = self.unapply_K(self.P)
-        R, t = Rt[:, :3], Rt[:, 3]
-        C = -R.T @ t  # camera position in world reference
-        o = np.linalg.det(R) * R[2, :]  # optical axis in world reference
-        return C, o
 
     def apply_K(self, X: np.ndarray) -> np.ndarray:
         return self.K @ X
