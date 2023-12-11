@@ -15,6 +15,11 @@ class Camera:
         return Camera(K, np.hstack((R, t)), R, t)
 
     @staticmethod
+    def from_P(K: np.ndarray, P: np.ndarray) -> Camera:
+        Rt = np.linalg.inv(K) @ P
+        return Camera(K, Rt, Rt[:, :3], Rt[:, 3][:, np.newaxis])
+
+    @staticmethod
     def get_fundamental(P1: Camera, P2: Camera) -> np.ndarray:
         K_ = P1.K_
         R21 = P2.R @ P1.R.T
@@ -28,12 +33,12 @@ class Camera:
         u2p = P2.project_Kless(X)
         return np.logical_and(u1p[2, :] > 0, u2p[2, :] > 0)
 
-    def __init__(self, K: np.ndarray, P: np.ndarray, R: np.ndarray, t: np.ndarray) -> None:
+    def __init__(self, K: np.ndarray, P_Kless: np.ndarray, R: np.ndarray, t: np.ndarray) -> None:
         self.K = K
         self.K_ = np.linalg.inv(K)
         self.R = R
         self.t = t
-        self.P_Kless = P
+        self.P_Kless = P_Kless
         self.P = self.K @ self.P_Kless
         self.order = -1
 

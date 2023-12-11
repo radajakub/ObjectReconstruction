@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.optimize import fmin
+import scipy.optimize as opt
 
 from packages.corresp import Corresp
 
@@ -37,6 +37,7 @@ class CameraGluer(RANSAC):
         self.reprojection_threshold = config.reprojection_threshold
         self.p = config.p
         self.max_iterations = config.max_iter
+        self.refine_cameras = config.refine_cameras
         self.reset_cameras()
         self.initialize_manipulator()
 
@@ -108,15 +109,28 @@ class CameraGluer(RANSAC):
         # (3) Estimate the global pose and orientation of the camera Pj using the P3P algorithm in RANSAC scheme
         estimate = self.fit(scene_points, image_points)
 
-        # (5) Refine the camera Pj using numeric minimisation of reprojection errors in Ij (updates Pj only)
-        # TODO
-
         # (4) Insert the camera Pj into the set of selected cameras
         Pj = Camera.from_Rt(self.loader.K, estimate.R, estimate.t)
         self.count += 1
         Pj.set_order(self.count)
         self.cameras[Ij] = Pj
         self.manipulator.join_camera(Ij - 1, estimate.inlier_indices)
+
+        # (5) Refine the camera Pj using numeric minimisation of reprojection errors in Ij (updates Pj only)
+        if self.refine_cameras:
+            scene_inliers = scene_points[:, estimate.inlier_indices]
+            image_inliers = image_points[:, estimate.inlier_indices]
+
+            def opt_P(P: np.ndarray):
+                P = P.reshape((3, 4))
+                image_inliers_reprojected = P @ scene_inliers
+                return np.sum(self.model.error(image_inliers, image_inliers_reprojected))
+            res = opt.minimize(opt_P, Pj.P.flatten())
+
+            # replace the old camera
+            new_P = res['x'].reshape((3, 4))
+            Pj = Camera.from_P(Pj.K, new_P)
+            self.cameras[Ij] = Pj
 
         # (6) Find correspondences from between Ij and the images of selected cameras, that have not 3D point yet and reconstruct new 3D points and add them to the point cloud
         for Ii in self.manipulator.get_cneighbours(Ij - 1) + 1:
@@ -129,8 +143,8 @@ class CameraGluer(RANSAC):
 
             # reproject and threshold reprojection error
             X = tb.Pu2X(Pj.P, Pi.P, corrj, corri)
-            ej = self.model.error(X, corrj, Pj)
-            ei = self.model.error(X, corri, Pi)
+            ej = self.model.camera_error(X, corrj, Pj)
+            ei = self.model.camera_error(X, corri, Pi)
             correct = np.logical_and(ej < self.reprojection_threshold, ei < self.reprojection_threshold)
             corrj = corrj[:, correct]
             corri = corri[:, correct]
@@ -141,6 +155,7 @@ class CameraGluer(RANSAC):
             corri = corri[:, visible]
 
             scene_indices = self.point_cloud.add(Pj, Pi, corrj, corri)
+            # self.manipulator.new_x(Ij - 1, Ii - 1, np.arange(X.shape[1])[correct], scene_indices)
             self.manipulator.new_x(Ij - 1, Ii - 1, np.arange(X.shape[1])[correct][visible], scene_indices)
 
         for Ii in self.manipulator.get_selected_cameras() + 1:
@@ -150,11 +165,9 @@ class CameraGluer(RANSAC):
             u = tb.e2p(self.loader.get_points(Ii, uid))
 
             # Verify (by reprojection error) scene-to-image correspondences in Xu_tentative. A subset of good points is obtained
-            e = self.model.error(X, u, Pi)
+            e = self.model.camera_error(X, u, Pi)
             indices = np.arange(X.shape[1])
             inl = np.logical_and(~Xu_verified, e < self.reprojection_threshold)
-
-            # curr_ok = np.arange(X.shape[1])[e < self.reprojection_threshold]
             curr_ok = indices[inl]
 
             self.manipulator.verify_x(Ii - 1, curr_ok)
@@ -202,7 +215,7 @@ class CameraGluer(RANSAC):
                     continue
 
                 # (6c) Compute reprojection error
-                err = self.model.error(visible_scene_points, visible_image_points, P)
+                err = self.model.camera_error(visible_scene_points, visible_image_points, P)
                 inliers = err < np.power(self.pose_threshold, 2)
                 inlier_indices = visible_indices[inliers]
                 support = self.model.support(err[inliers], self.pose_threshold)

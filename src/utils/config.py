@@ -2,9 +2,12 @@ from inout import DataLoader
 
 
 class Config:
+    true_vals = ['true', 'True', 1, '1']
+
     default_threshold = 3
     default_p = 0.9999
     default_max_iter = 1000
+    default_pose_threshold = 3
     default_reprojection_threshold = 3
 
     def __init__(self, argv: list[str]) -> None:
@@ -24,6 +27,7 @@ class Config:
         self.silent = False
         self.pose_threshold = Config.default_threshold
         self.reprojection_threshold = Config.default_reprojection_threshold
+        self.refine_cameras = False
         for i in range(0, len(args), 2):
             key, val = args[i], args[i+1]
             key = key.strip('-')
@@ -49,6 +53,8 @@ class Config:
                 self.max_iter = int(val)
             elif key == 'silent':
                 self.silent = bool(val)
+            elif key == 'refine-cameras':
+                self.refine_cameras = bool(val)
 
         if self.scene is None:
             raise ValueError('scene not specified')
