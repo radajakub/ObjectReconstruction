@@ -66,9 +66,11 @@ class EpipolarEstimate(Estimate):
 
 
 class EpipolarEstimator(RANSAC):
-    def __init__(self, K: np.ndarray, threshold: float = Config.default_threshold, p: float = Config.default_p, max_iterations: int = Config.default_max_iter, rng: np.random.Generator = None, logger: Logger = None) -> None:
-        super().__init__(model=EssentialMatrix(K), threshold=threshold,
-                         p=p, max_iterations=max_iterations, rng=rng)
+    def __init__(self, K: np.ndarray, config: Config, rng: np.random.Generator = None, logger: Logger = None) -> None:
+        super().__init__(model=EssentialMatrix(K), config=config, rng=rng)
+        self.p = config.p
+        self.threshold = config.threshold
+        self.max_iterations = config.max_iter
         self.logger = logger
 
     def compute_epipolar_lines(self, estimate: EpipolarEstimate, x1: np.ndarray, x2: np.ndarray) -> np.ndarray:

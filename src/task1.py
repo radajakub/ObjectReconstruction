@@ -22,8 +22,7 @@ if __name__ == "__main__":
 
     corr1, corr2 = loader.get_corresp(config.img1, config.img2)
 
-    estimator = EpipolarEstimator(K=loader.K, threshold=config.threshold, p=config.p,
-                                  max_iterations=config.max_iter, rng=rng, logger=logger)
+    estimator = EpipolarEstimator(K=loader.K, config=config, rng=rng, logger=logger)
     estimate = estimator.fit(corr1, corr2)
 
     corr_in = estimate.get_inliers(corr1, corr2)

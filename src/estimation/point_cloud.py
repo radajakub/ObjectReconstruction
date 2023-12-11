@@ -25,14 +25,7 @@ class PointCloud:
         assert (corr1.shape[0] == 3)
         assert (corr2.shape[0] == 3)
 
-        # TODO: Correct sampson ??
         corr1, corr2 = tb.u_correct_sampson(Camera.get_fundamental(P1, P2), corr1, corr2)
-
-        # TODO: Check visibility ??
-        visible = Camera.check_visibility(P1, P2, corr1, corr2)
-        corr1 = corr1[:, visible]
-        corr2 = corr2[:, visible]
-
         points_3d = tb.Pu2X(P1.P, P2.P, corr1, corr2)
 
         prev_l = 0 if self.points is None else self.points.shape[1]

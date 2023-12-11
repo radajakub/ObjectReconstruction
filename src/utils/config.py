@@ -5,6 +5,7 @@ class Config:
     default_threshold = 3
     default_p = 0.9999
     default_max_iter = 1000
+    default_reprojection_threshold = 3
 
     def __init__(self, argv: list[str]) -> None:
         args = argv[1:]
@@ -21,6 +22,8 @@ class Config:
         self.p = Config.default_p
         self.max_iter = Config.default_max_iter
         self.silent = False
+        self.pose_threshold = Config.default_threshold
+        self.reprojection_threshold = Config.default_reprojection_threshold
         for i in range(0, len(args), 2):
             key, val = args[i], args[i+1]
             key = key.strip('-')
@@ -36,6 +39,10 @@ class Config:
                 self.seed = int(val)
             elif key == 'threshold':
                 self.threshold = float(val)
+            elif key == 'pose-threshold':
+                self.pose_threshold = float(val)
+            elif key == 'reprojection-threshold':
+                self.reprojection_threshold = float(val)
             elif key == 'p':
                 self.p = float(val)
             elif key == 'max_iter':
@@ -61,4 +68,8 @@ class Config:
         res += f'---- threshold {self.threshold}\n'
         res += f'---- p {self.p}\n'
         res += f'---- max_iter {self.max_iter}\n'
+        res += f'-- pose estimation params\n'
+        res += f'---- threshold {self.pose_threshold}\n'
+        res += f'-- reprojection params\n'
+        res += f'---- threshold {self.reprojection_threshold}\n'
         return res

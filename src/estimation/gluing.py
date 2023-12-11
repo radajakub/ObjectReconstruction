@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.optimize import fmin
 
 from packages.corresp import Corresp
 
@@ -26,13 +27,16 @@ class GlobalPoseEstimate:
 
 
 class CameraGluer(RANSAC):
-    def __init__(self, loader: DataLoader, point_cloud: PointCloud, threshold: float = Config.default_threshold, p: float = Config.default_p, max_iterations: int = Config.default_max_iter, rng: np.random.Generator = None, logger: Logger = None) -> None:
-        super().__init__(model=GlobalPose(loader.K), threshold=threshold,
-                         p=p, max_iterations=max_iterations, rng=rng)
+    def __init__(self, loader: DataLoader, point_cloud: PointCloud, config: Config, rng: np.random.Generator = None, logger: Logger = None) -> None:
+        super().__init__(model=GlobalPose(loader.K), config=config, rng=rng)
         self.logger = logger
         self.loader = loader
         self.point_cloud = point_cloud
-        self.epipolar_estimator = EpipolarEstimator(self.loader.K, threshold, p, max_iterations, rng, logger)
+        self.epipolar_estimator = EpipolarEstimator(self.loader.K, config, rng, logger)
+        self.pose_threshold = config.pose_threshold
+        self.reprojection_threshold = config.reprojection_threshold
+        self.p = config.p
+        self.max_iterations = config.max_iter
         self.reset_cameras()
         self.initialize_manipulator()
 
@@ -103,8 +107,6 @@ class CameraGluer(RANSAC):
 
         # (3) Estimate the global pose and orientation of the camera Pj using the P3P algorithm in RANSAC scheme
         estimate = self.fit(scene_points, image_points)
-        if estimate is None:
-            raise Exception("Appending camera failed")
 
         # (5) Refine the camera Pj using numeric minimisation of reprojection errors in Ij (updates Pj only)
         # TODO
@@ -125,20 +127,36 @@ class CameraGluer(RANSAC):
             corrj = tb.e2p(self.loader.get_points(Ij, mj))
             corri = tb.e2p(self.loader.get_points(Ii, mi))
 
-            # TODO : some check?
+            # reproject and threshold reprojection error
+            X = tb.Pu2X(Pj.P, Pi.P, corrj, corri)
+            ej = self.model.error(X, corrj, Pj)
+            ei = self.model.error(X, corri, Pi)
+            correct = np.logical_and(ej < self.reprojection_threshold, ei < self.reprojection_threshold)
+            corrj = corrj[:, correct]
+            corri = corri[:, correct]
+
+            # TODO: Check visibility ??
+            visible = Camera.check_visibility(Pj, Pi, corrj, corri)
+            corrj = corrj[:, visible]
+            corri = corri[:, visible]
+
             scene_indices = self.point_cloud.add(Pj, Pi, corrj, corri)
-            self.manipulator.new_x(Ij - 1, Ii - 1, np.arange(scene_indices.shape[0]), scene_indices)
+            self.manipulator.new_x(Ij - 1, Ii - 1, np.arange(X.shape[1])[correct][visible], scene_indices)
 
         for Ii in self.manipulator.get_selected_cameras() + 1:
+            Pi = self.cameras[Ii]
             Xid, uid, Xu_verified = self.manipulator.get_Xu(Ii - 1)
             X = tb.e2p(self.point_cloud.get_points(Xid))
             u = tb.e2p(self.loader.get_points(Ii, uid))
-            X_tentative = X[:, ~Xu_verified]
-            u_tentative = u[:, ~Xu_verified]
-            # TODO
+
             # Verify (by reprojection error) scene-to-image correspondences in Xu_tentative. A subset of good points is obtained
-            # curr_ok = np.arange(X.shape[1])[~Xu_verified]
-            curr_ok = []
+            e = self.model.error(X, u, Pi)
+            indices = np.arange(X.shape[1])
+            inl = np.logical_and(~Xu_verified, e < self.reprojection_threshold)
+
+            # curr_ok = np.arange(X.shape[1])[e < self.reprojection_threshold]
+            curr_ok = indices[inl]
+
             self.manipulator.verify_x(Ii - 1, curr_ok)
 
         self.manipulator.finalize_camera()
@@ -185,9 +203,9 @@ class CameraGluer(RANSAC):
 
                 # (6c) Compute reprojection error
                 err = self.model.error(visible_scene_points, visible_image_points, P)
-                inliers = err < np.power(self.threshold, 2)
+                inliers = err < np.power(self.pose_threshold, 2)
                 inlier_indices = visible_indices[inliers]
-                support = self.model.support(err[inliers], self.threshold)
+                support = self.model.support(err[inliers], self.pose_threshold)
                 if support > best_support:
                     best_support = support
                     best_estimate = GlobalPoseEstimate(R, t, inlier_indices)

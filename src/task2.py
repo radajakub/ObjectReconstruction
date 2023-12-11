@@ -18,8 +18,7 @@ if __name__ == "__main__":
     logger.intro()
 
     point_cloud = PointCloud(loader.K)
-    camera_gluer = CameraGluer(loader, point_cloud, threshold=config.threshold, p=config.p,
-                               max_iterations=config.max_iter, rng=rng, logger=logger)
+    camera_gluer = CameraGluer(loader, point_cloud, config=config, rng=rng, logger=logger)
 
     camera_gluer.initial(config.img1, config.img2)
 
@@ -28,8 +27,10 @@ if __name__ == "__main__":
     while None in camera_gluer.cameras.values():
         camera_gluer.append_camera()
         print(f'{len(camera_gluer.get_cameras())} cameras: {point_cloud.get_size()}')
+        # break
 
     plotter = Plotter3D(hide_axes=True, invert_yaxis=False, aspect_equal=True)
+    plotter.add_points(point_cloud.get_all())
     plotter.add_cameras(camera_gluer.get_cameras())
 
     if config.outpath is None:

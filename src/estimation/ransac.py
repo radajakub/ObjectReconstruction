@@ -5,6 +5,7 @@ import os
 import numpy as np
 from models import Model
 from inout import Logger, RANSACLogEntry
+from utils import Config
 
 
 class Estimate:
@@ -27,11 +28,11 @@ class Estimate:
 
 
 class RANSAC:
-    def __init__(self, model: Model, threshold: float = 3, p=0.999, max_iterations=1000, rng: np.random.Generator = None, logger: Logger = None) -> None:
+    def __init__(self, model: Model, config: Config, rng: np.random.Generator = None, logger: Logger = None) -> None:
         self.model = model
-        self.threshold = threshold
-        self.p = p
-        self.max_iterations = max_iterations
+        self.threshold = config.threshold
+        self.p = config.p
+        self.max_iterations = config.max_iter
         if rng is not None:
             self.rng = rng
         else:
