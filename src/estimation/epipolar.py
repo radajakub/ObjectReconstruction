@@ -3,9 +3,8 @@ from __future__ import annotations
 import numpy as np
 import os
 
-from .camera import Camera
 from .ransac import RANSAC, Estimate
-from models import EssentialMatrix
+from models import EssentialMatrix, Camera
 import utils.toolbox as tb
 from inout import Logger, EpipolarEstimateLogEntry
 from utils import Config
@@ -124,13 +123,11 @@ class EpipolarEstimator(RANSAC):
                 inlier_indices = np.arange(X1.shape[1])[inliers]
 
                 # check visibility of inliers
-                # P1 = self.model.apply_K(np.eye(3, 4))
-                # P2 = self.model.apply_K(np.hstack((R, t)))  # rotated and moved camera
                 P1 = Camera.zero_camera(self.model.K)
                 P2 = Camera.from_Rt(self.model.K, R, t)
                 X = tb.Pu2X(P1.P_Kless, P2.P_Kless, X1[:, inlier_indices], X2[:, inlier_indices])
-                u1p = P1.apply_P_Kless(X)
-                u2p = P2.apply_P_Kless(X)
+                u1p = P1.project_Kless(X)
+                u2p = P2.project_Kless(X)
                 visible = np.logical_and(u1p[2, :] > 0, u2p[2, :] > 0)
                 visible_indices = inlier_indices[visible]
 

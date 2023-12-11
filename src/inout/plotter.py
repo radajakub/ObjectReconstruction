@@ -6,10 +6,26 @@ from utils import is_in_range_approx
 from estimation import Camera
 
 
-class Plotter:
-    def __init__(self, rows: int = 1, cols: int = 1, hide_axes: bool = True, invert_yaxis: bool = True, aspect_equal: bool = False):
-        self.fig, self.axes = plt.subplots(rows, cols, squeeze=False)
+class BasePlotter:
+    def __init__(self):
         self.cmap = plt.cm.get_cmap('tab10')
+
+    def get_color(self, num: int):
+        return self.cmap(num)
+
+    def show(self):
+        self._prepare()
+        plt.show()
+
+    def save(self, outfile: str):
+        self._prepare()
+        self.fig.savefig(outfile, bbox_inches='tight')
+
+
+class Plotter(BasePlotter):
+    def __init__(self, rows: int = 1, cols: int = 1, hide_axes: bool = True, invert_yaxis: bool = True, aspect_equal: bool = False):
+        super().__init__()
+        self.fig, self.axes = plt.subplots(rows, cols, squeeze=False)
         for ax in self.axes.flatten():
             if hide_axes:
                 ax.axis('off')
@@ -29,9 +45,6 @@ class Plotter:
         else:
             kwargs = {}
         self.get_ax(row, col).imshow(image, **kwargs)
-
-    def get_color(self, num: int):
-        return self.cmap(num)
 
     def add_points(self, X: np.ndarray, color: str = 'black', marker='o', size: float = 1.0, row: int = 1, col: int = 1):
         assert len(X.shape) == 2
@@ -84,17 +97,10 @@ class Plotter:
             for ax in self.axes.flatten():
                 ax.set_aspect("equal", adjustable="box")
 
-    def show(self):
-        self._prepare()
-        plt.show()
 
-    def save(self, outfile: str):
-        self._prepare()
-        self.fig.savefig(outfile, bbox_inches='tight')
-
-
-class Plotter3D:
+class Plotter3D(BasePlotter):
     def __init__(self, hide_axes: bool = True, invert_yaxis: bool = True, aspect_equal: bool = False):
+        super().__init__()
         self.fig = plt.figure()
         self.ax = self.fig.add_subplot(projection='3d')
         self.cmap = plt.cm.get_cmap('tab10')
@@ -111,10 +117,9 @@ class Plotter3D:
     def add_camera(self, c: Camera, color: str = 'black', linewidth: float = 1.0, show_plane=False):
         center, axis = c.decompose()
         end = center + 5 * axis
-        xmin, xmax = self.ax.get_xlim()
-        ymin, ymax = self.ax.get_ylim()
         if show_plane:
-            xx, yy = np.meshgrid(range(int(xmin), int(xmax)), range(int(ymin), int(ymax)))
+            xx, yy = np.meshgrid(range(int(center[0] - 5), int(center[0] + 5)),
+                                 range(int(center[1] - 5), int(center[1] + 5)))
             d = -np.dot(center, axis)
             zz = -(axis[0] * xx + axis[1] * yy + d) / axis[2]
             self.ax.plot_surface(xx, yy, zz, color=color, alpha=0.5)
@@ -123,11 +128,3 @@ class Plotter3D:
     def _prepare(self):
         if self.aspect_equal:
             self.ax.set_aspect("equal", adjustable="box")
-
-    def show(self):
-        self._prepare()
-        plt.show()
-
-    def save(self, outfile: str):
-        self._prepare()
-        self.fig.savefig(outfile, bbox_inches='tight', dpi=500)

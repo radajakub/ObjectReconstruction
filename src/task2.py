@@ -21,13 +21,16 @@ if __name__ == "__main__":
     camera_gluer = CameraGluer(loader, point_cloud, threshold=config.threshold, p=config.p,
                                max_iterations=config.max_iter, rng=rng, logger=logger)
 
-    # exit(0)
     camera_gluer.initial(config.img1, config.img2)
 
+    camera_gluer.append_camera()
+    # exit(0)
+
     plotter = Plotter3D(hide_axes=True, invert_yaxis=False, aspect_equal=True)
-    plotter.add_points(camera_gluer.point_cloud.get_points())
-    plotter.add_camera(camera_gluer.cameras[config.img1], color='red', show_plane=True)
-    plotter.add_camera(camera_gluer.cameras[config.img2], color='blue', show_plane=True)
+    plotter.add_points(camera_gluer.point_cloud.get_all())
+    for key, camera in camera_gluer.cameras.items():
+        if camera is not None:
+            plotter.add_camera(camera, color=plotter.get_color(key), show_plane=True)
 
     if config.outpath is None:
         plotter.show()

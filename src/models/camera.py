@@ -25,8 +25,8 @@ class Camera:
         o = np.linalg.det(self.R) * self.R[2, :]  # optical axis in world reference
         return C.squeeze(), o
 
-    def apply_P(self, X: np.ndarray) -> np.ndarray:
+    def project(self, X: np.ndarray) -> np.ndarray:
         return self.P @ X
 
-    def apply_P_Kless(self, X: np.ndarray) -> np.ndarray:
+    def project_Kless(self, X: np.ndarray) -> np.ndarray:
         return self.P_Kless @ X
