@@ -36,8 +36,15 @@ class CameraGluer(RANSAC):
         self.reset_cameras()
         self.initialize_manipulator()
 
+    def get_cameras(self) -> list[Camera]:
+        return [camera for camera in self.cameras.values() if camera is not None]
+
+    def get_camera_count(self) -> int:
+        return sum([1 for camera in self.cameras.values() if camera is not None])
+
     def reset_cameras(self) -> None:
         self.cameras = {key: None for key in self.loader.image_ids}
+        self.count = 0
 
     def initialize_manipulator(self) -> None:
         # initialize cameras
@@ -65,6 +72,10 @@ class CameraGluer(RANSAC):
         # Construct the cameras P1 and P2.
         # Put these cameras into the set of selected cameras.
         P1, P2 = estimate.get_cameras()
+        self.count += 1
+        P1.set_order(self.count)
+        self.count += 1
+        P2.set_order(self.count)
         self.cameras[img1] = P1
         self.cameras[img2] = P2
 
@@ -81,17 +92,17 @@ class CameraGluer(RANSAC):
 
     def append_camera(self) -> None:
         # (1) Select an image (Ij) that has not a camera estimated yet
-        imgs, counts = self.manipulator.get_green_cameras()
+        Is, counts = self.manipulator.get_green_cameras()
         # add 1 to get it into my indexing for consistency
-        img = imgs[np.argmax(counts)] + 1
+        Ij = Is[np.argmax(counts)] + 1
 
         # (2) Find image points in Ij, that correspond to some allready reconstructed 3D points in the cloud
-        point_indices, corr_indices, Xu_verified = self.manipulator.get_Xu(img - 1)
-        points = tb.e2p(self.point_cloud.get_points(point_indices))
-        correspondences = tb.e2p(self.loader.get_points(img, corr_indices))
+        point_indices, corr_indices, _ = self.manipulator.get_Xu(Ij - 1)
+        scene_points = tb.e2p(self.point_cloud.get_points(point_indices))
+        image_points = tb.e2p(self.loader.get_points(Ij, corr_indices))
 
         # (3) Estimate the global pose and orientation of the camera Pj using the P3P algorithm in RANSAC scheme
-        estimate = self.fit(points, correspondences)
+        estimate = self.fit(scene_points, image_points)
         if estimate is None:
             raise Exception("Appending camera failed")
 
@@ -99,23 +110,38 @@ class CameraGluer(RANSAC):
         # TODO
 
         # (4) Insert the camera Pj into the set of selected cameras
-        camera = Camera.from_Rt(self.loader.K, estimate.R, estimate.t)
-        self.cameras[img] = camera
-        self.manipulator.join_camera(img - 1, estimate.inlier_indices)
+        Pj = Camera.from_Rt(self.loader.K, estimate.R, estimate.t)
+        self.count += 1
+        Pj.set_order(self.count)
+        self.cameras[Ij] = Pj
+        self.manipulator.join_camera(Ij - 1, estimate.inlier_indices)
 
         # (6) Find correspondences from between Ij and the images of selected cameras, that have not 3D point yet and reconstruct new 3D points and add them to the point cloud
-        # for i in self.manipulator.get_cneighbours(img - 1):
-        #     img_n = i + 1
-        #     m_img, m_img_n = self.manipulator.get_m(img - 1, img_n - 1)
-        #     print(m_img.shape, m_img_n.shape)
-        #     P_i = self.cameras[img_n]
+        for Ii in self.manipulator.get_cneighbours(Ij - 1) + 1:
+            mj, mi = self.manipulator.get_m(Ij - 1, Ii - 1)
+            Pi = self.cameras[Ii]
 
-        #     # Reconstruct new scene points using the cameras i and ic and image-to-image correspondences m
-        #     corr_img = tb.e2p(self.loader.get_points(img, m_img))
-        #     corr_img_n = tb.e2p(self.loader.get_points(img_n, m_img_n))
-        #     # TODO: some check?
-        #     scene_indices = self.point_cloud.add(camera, P_i, corr_img, corr_img_n)
-        #     self.manipulator.new_x(img - 1, img_n - 1, np.arange(m_img_n.shape[0]), scene_indices)
+            # Reconstruct new scene points using the cameras i and ic and image-to-image correspondences m
+            corrj = tb.e2p(self.loader.get_points(Ij, mj))
+            corri = tb.e2p(self.loader.get_points(Ii, mi))
+
+            # TODO : some check?
+            scene_indices = self.point_cloud.add(Pj, Pi, corrj, corri)
+            self.manipulator.new_x(Ij - 1, Ii - 1, np.arange(scene_indices.shape[0]), scene_indices)
+
+        for Ii in self.manipulator.get_selected_cameras() + 1:
+            Xid, uid, Xu_verified = self.manipulator.get_Xu(Ii - 1)
+            X = tb.e2p(self.point_cloud.get_points(Xid))
+            u = tb.e2p(self.loader.get_points(Ii, uid))
+            X_tentative = X[:, ~Xu_verified]
+            u_tentative = u[:, ~Xu_verified]
+            # TODO
+            # Verify (by reprojection error) scene-to-image correspondences in Xu_tentative. A subset of good points is obtained
+            # curr_ok = np.arange(X.shape[1])[~Xu_verified]
+            curr_ok = []
+            self.manipulator.verify_x(Ii - 1, curr_ok)
+
+        self.manipulator.finalize_camera()
 
     def fit(self, scene_points: np.ndarray, image_points: np.ndarray) -> GlobalPoseEstimate:
         assert (scene_points.shape[1] == image_points.shape[1])
@@ -151,8 +177,7 @@ class CameraGluer(RANSAC):
                 P = Camera.from_Rt(self.model.K, R, t)
 
                 # (6b) Select 3D points that are in front of the camera
-                projections = P.project_Kless(scene_points)
-                visible_indices = np.arange(projections.shape[1])[projections[2, :] > 0]
+                visible_indices = P.visible_indices(scene_points)
                 visible_scene_points = scene_points[:, visible_indices]
                 visible_image_points = image_points[:, visible_indices]
                 if visible_indices.shape[0] == 0:

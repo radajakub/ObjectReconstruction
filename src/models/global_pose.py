@@ -32,7 +32,8 @@ class GlobalPose(Model):
 
     def support(self, inlier_errors: np.ndarray, threshold: float) -> int:
         # here we dont raise the inlier_errors to the power of 2, they are already squared
-        return np.sum(1 - inlier_errors / np.power(threshold, 2))
+        return np.sum(1 - (inlier_errors / np.power(threshold, 2)))
+        # return np.sum(1 - (inlier_errors / threshold))
 
     def apply_K(self, X: np.ndarray) -> np.ndarray:
         return self.K @ X

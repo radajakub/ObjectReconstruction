@@ -114,16 +114,39 @@ class Plotter3D(BasePlotter):
         assert X.shape[0] == 3
         self.ax.scatter(X[0, :], X[1, :], X[2, :], s=size, facecolors=color, edgecolors=color, marker=marker)
 
-    def add_camera(self, c: Camera, color: str = 'black', linewidth: float = 1.0, show_plane=False):
+    def add_camera(self, c: Camera, color: str = 'black', linewidth: float = 1.0, linelength: float = 1.0, size: float = 2.0, plane_size: float = 2.0, show_plane=False):
         center, axis = c.decompose()
-        end = center + 5 * axis
+        end = center + linelength * axis
+        x, y, z = center
         if show_plane:
-            xx, yy = np.meshgrid(range(int(center[0] - 5), int(center[0] + 5)),
-                                 range(int(center[1] - 5), int(center[1] + 5)))
+            xx, yy = np.meshgrid(range(int(x - plane_size), int(x + plane_size)),
+                                 range(int(y - plane_size), int(y + plane_size)))
             d = -np.dot(center, axis)
             zz = -(axis[0] * xx + axis[1] * yy + d) / axis[2]
             self.ax.plot_surface(xx, yy, zz, color=color, alpha=0.5)
-        self.ax.plot([center[0], end[0]], [center[1], end[1]], [center[2], end[2]], color=color, linewidth=linewidth)
+        self.ax.plot([x, end[0]], [y, end[1]], [z, end[2]], color=color, linewidth=linewidth)
+        self.ax.scatter(x, y, z, facecolors=color, edgecolors=color, s=size, marker='s')
+        self.ax.text(x, y, z, c.order)
+
+    def add_cameras(self, cs: list[Camera], color: str = 'blue', highlight: str = 'red', linecolor='black', linewidth: float = 1.0, linelength: float = 1.0, size: float = 2.0, show_plane: bool = False):
+        centers = np.zeros((3, len(cs)))
+        axes = np.zeros((3, len(cs)))
+        for c in cs:
+            center, axis = c.decompose()
+            centers[:, c.order - 1] = center
+            axes[:, c.order - 1] = axis
+        ends = centers + linelength * axes
+        for i, (c, e) in enumerate(zip(centers.T, ends.T)):
+            x, y, z = c
+            self.ax.plot([x, e[0]], [y, e[1]], [z, e[2]], linewidth=linewidth,
+                         color=highlight if i in [0, 1] else color)
+            self.ax.scatter(x, y, z, marker='s', c=color, s=size)
+            self.ax.text(x, y, z, i + 1)
+        if show_plane:
+            self.ax.plot_trisurf(centers[0, :], centers[1, :], centers[2, :],
+                                 color=linecolor, edgecolors=color, alpha=0)
+            self.ax.plot([centers[0, 0], centers[0, 1]], [centers[1, 0], centers[1, 1]],
+                         [centers[2, 0], centers[2, 1]], color=highlight)
 
     def _prepare(self):
         if self.aspect_equal:

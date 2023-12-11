@@ -125,10 +125,7 @@ class EpipolarEstimator(RANSAC):
                 # check visibility of inliers
                 P1 = Camera.zero_camera(self.model.K)
                 P2 = Camera.from_Rt(self.model.K, R, t)
-                X = tb.Pu2X(P1.P_Kless, P2.P_Kless, X1[:, inlier_indices], X2[:, inlier_indices])
-                u1p = P1.project_Kless(X)
-                u2p = P2.project_Kless(X)
-                visible = np.logical_and(u1p[2, :] > 0, u2p[2, :] > 0)
+                visible = Camera.check_visibility(P1, P2, X1[:, inlier_indices], X2[:, inlier_indices])
                 visible_indices = inlier_indices[visible]
 
                 supp = self.model.support(inlier_eps[visible], threshold=self.threshold)

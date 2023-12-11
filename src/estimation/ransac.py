@@ -39,7 +39,10 @@ class RANSAC:
         self.logger = logger
 
     def _criterion(self, w: float) -> int:
-        return np.log(1 - self.p) / np.log(1 - np.power(w, self.model.min_samples))
+        eps = 1 - np.power(w, self.model.min_samples)
+        if eps == 0:
+            return np.inf
+        return np.log(1 - self.p) / np.log(eps)
 
     def fit(self, X: np.ndarray) -> None:
         self.it = 0
