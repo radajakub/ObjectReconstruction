@@ -4,7 +4,8 @@ import numpy as np
 import os
 
 from .ransac import RANSAC, Estimate
-from models import EssentialMatrix, Camera
+from models import EssentialMatrix
+from res import Camera
 import utils.toolbox as tb
 from inout import Logger, EpipolarEstimateLogEntry
 from utils import Config

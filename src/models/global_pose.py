@@ -1,7 +1,7 @@
 import numpy as np
 
 from .model import Model
-from .camera import Camera
+from res import Camera
 from packages import p3p
 
 
@@ -19,17 +19,7 @@ class GlobalPose(Model):
         return Rts
 
     def camera_error(self, X: np.ndarray, u: np.ndarray, c: Camera) -> np.ndarray:
-        return self.error(u, c.project(X))
-
-    def error(self, u: np.ndarray, u_hat: Camera) -> np.ndarray:
-        es = []
-        for u_hat_i, u_i in zip(u_hat.T, u.T):
-            ei = np.array([
-                u_hat_i[0] / u_hat_i[2] - u_i[0] / u_i[2],
-                u_hat_i[1] / u_hat_i[2] - u_i[1] / u_i[2]
-            ])
-            es.append(np.dot(ei, ei))
-        return np.array(es)
+        return Camera.reprojection_error(u, c.project(X))
 
     def support(self, inlier_errors: np.ndarray, threshold: float) -> int:
         # here we dont raise the inlier_errors to the power of 2, they are already squared

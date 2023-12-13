@@ -3,7 +3,7 @@ from PIL import Image
 import numpy as np
 import utils.toolbox as tb
 from utils import is_in_range_approx
-from estimation import Camera
+from res import Camera
 
 
 class BasePlotter:
@@ -99,7 +99,7 @@ class Plotter(BasePlotter):
 
 
 class Plotter3D(BasePlotter):
-    def __init__(self, hide_axes: bool = True, invert_yaxis: bool = True, aspect_equal: bool = False):
+    def __init__(self, hide_axes: bool = True, aspect_equal: bool = False):
         super().__init__()
         self.fig = plt.figure()
         self.ax = self.fig.add_subplot(projection='3d')
@@ -107,8 +107,6 @@ class Plotter3D(BasePlotter):
         self.aspect_equal = aspect_equal
         if hide_axes:
             self.ax.axis('off')
-        if invert_yaxis:
-            self.ax.invert_yaxis()
 
     def add_points(self, X: np.ndarray, color: str = 'black', marker='o', size: float = 1.0):
         assert X.shape[0] == 3

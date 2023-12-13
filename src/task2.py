@@ -23,9 +23,8 @@ if __name__ == "__main__":
     camera_gluer.initial(config.img1, config.img2)
     while None in camera_gluer.cameras.values():
         camera_gluer.append_camera()
-        # break
 
-    plotter = Plotter3D(hide_axes=True, invert_yaxis=False, aspect_equal=True)
+    plotter = Plotter3D(hide_axes=True, aspect_equal=True)
     plotter.add_points(point_cloud.get_all())
     plotter.add_cameras(camera_gluer.get_cameras())
 

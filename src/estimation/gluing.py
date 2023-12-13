@@ -3,12 +3,12 @@ import scipy.optimize as opt
 
 from packages.corresp import Corresp
 
-from .point_cloud import PointCloud
 from .ransac import RANSAC
 from .epipolar import EpipolarEstimator
+from res import Camera, PointCloud
 from utils import Config, toolbox as tb
 from inout import Logger, DataLoader, CameraGluerLogEntry
-from models import GlobalPose, Camera
+from models import GlobalPose
 
 
 class GlobalPoseEstimate:
@@ -37,19 +37,23 @@ class CameraGluer(RANSAC):
         self.reprojection_threshold = config.reprojection_threshold
         self.p = config.p
         self.max_iterations = config.max_iter
-        self.refine_cameras = config.refine_cameras
         self.reset_cameras()
         self.initialize_manipulator()
+
+    def reset_cameras(self) -> None:
+        self.cameras = {key: None for key in self.loader.image_ids}
+        self.count = 0
+
+    def add_camera(self, P: Camera, img: int) -> None:
+        self.count += 1
+        P.set_order(self.count)
+        self.cameras[img] = P
 
     def get_cameras(self) -> list[Camera]:
         return [camera for camera in self.cameras.values() if camera is not None]
 
     def get_camera_count(self) -> int:
         return sum([1 for camera in self.cameras.values() if camera is not None])
-
-    def reset_cameras(self) -> None:
-        self.cameras = {key: None for key in self.loader.image_ids}
-        self.count = 0
 
     def initialize_manipulator(self) -> None:
         # initialize cameras
@@ -77,21 +81,22 @@ class CameraGluer(RANSAC):
         # Construct the cameras P1 and P2.
         # Put these cameras into the set of selected cameras.
         P1, P2 = estimate.get_cameras()
-        self.count += 1
-        P1.set_order(self.count)
-        self.count += 1
-        P2.set_order(self.count)
-        self.cameras[img1] = P1
-        self.cameras[img2] = P2
+        self.add_camera(P1, img1)
+        self.add_camera(P2, img2)
 
-        # (5) Reconstruct the 3D point cloud using inlier correspondences between the images I1 and I2 using the cameras P1 and P2 (the points must be in front of both cameras)
         corr_in_1, corr_in_2 = estimate.get_inliers(corr1, corr2)
-        scene_indices = self.point_cloud.add_epipolar(estimate, corr_in_1, corr_in_2)
-
-        self.manipulator.start(img1 - 1, img2 - 1, estimate.inlier_indices, scene_indices)
+        corr_in_1 = tb.e2p(corr_in_1)
+        corr_in_2 = tb.e2p(corr_in_2)
 
         # (6) Refine the camera set {P1, P2} together with the point cloud using bundle adjustment.
-        # TODO
+        # fmin scipy on sampson error with minimal representation
+        P1, P2 = Camera.refine_pair(P1, P2, corr_in_1, corr_in_2)
+
+        # (5) Reconstruct the 3D point cloud using inlier correspondences between the images I1 and I2 using the cameras P1 and P2 (the points must be in front of both cameras)
+        F = estimate.model.get_fundamental(estimate.E)
+        scene_indices = self.point_cloud.add_F(F, P1, P2, corr_in_1, corr_in_2)
+
+        self.manipulator.start(img1 - 1, img2 - 1, estimate.inlier_indices, scene_indices)
 
         self.logger.log(CameraGluerLogEntry([img1, img2]))
 
@@ -111,26 +116,16 @@ class CameraGluer(RANSAC):
 
         # (4) Insert the camera Pj into the set of selected cameras
         Pj = Camera.from_Rt(self.loader.K, estimate.R, estimate.t)
-        self.count += 1
-        Pj.set_order(self.count)
-        self.cameras[Ij] = Pj
-        self.manipulator.join_camera(Ij - 1, estimate.inlier_indices)
 
         # (5) Refine the camera Pj using numeric minimisation of reprojection errors in Ij (updates Pj only)
-        if self.refine_cameras:
-            scene_inliers = scene_points[:, estimate.inlier_indices]
-            image_inliers = image_points[:, estimate.inlier_indices]
+        scene_inliers = scene_points[:, estimate.inlier_indices]
+        image_inliers = image_points[:, estimate.inlier_indices]
 
-            def opt_P(P: np.ndarray):
-                P = P.reshape((3, 4))
-                image_inliers_reprojected = P @ scene_inliers
-                return np.sum(self.model.error(image_inliers, image_inliers_reprojected))
-            res = opt.minimize(opt_P, Pj.P.flatten())
+        Pj = Pj.refine(scene_inliers, image_inliers)
 
-            # replace the old camera
-            new_P = res['x'].reshape((3, 4))
-            Pj = Camera.from_P(Pj.K, new_P)
-            self.cameras[Ij] = Pj
+        self.add_camera(Pj, Ij)
+
+        self.manipulator.join_camera(Ij - 1, estimate.inlier_indices)
 
         # (6) Find correspondences from between Ij and the images of selected cameras, that have not 3D point yet and reconstruct new 3D points and add them to the point cloud
         for Ii in self.manipulator.get_cneighbours(Ij - 1) + 1:
@@ -149,14 +144,8 @@ class CameraGluer(RANSAC):
             corrj = corrj[:, correct]
             corri = corri[:, correct]
 
-            # TODO: Check visibility ??
-            visible = Camera.check_visibility(Pj, Pi, corrj, corri)
-            corrj = corrj[:, visible]
-            corri = corri[:, visible]
-
             scene_indices = self.point_cloud.add(Pj, Pi, corrj, corri)
-            # self.manipulator.new_x(Ij - 1, Ii - 1, np.arange(X.shape[1])[correct], scene_indices)
-            self.manipulator.new_x(Ij - 1, Ii - 1, np.arange(X.shape[1])[correct][visible], scene_indices)
+            self.manipulator.new_x(Ij - 1, Ii - 1, np.arange(X.shape[1])[correct], scene_indices)
 
         for Ii in self.manipulator.get_selected_cameras() + 1:
             Pi = self.cameras[Ii]
