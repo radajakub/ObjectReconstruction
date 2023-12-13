@@ -2,9 +2,9 @@ import sys
 import os
 import numpy as np
 
-from inout import DataLoader, Logger, Plotter3D, ply_export, ActionLogEntry
+from inout import DataLoader, Logger, Plotter3D, ActionLogEntry
 from utils import Config
-from estimation import PointCloud, CameraGluer
+from estimation import CameraGluer
 
 if __name__ == "__main__":
     config = Config(sys.argv)
@@ -14,26 +14,32 @@ if __name__ == "__main__":
     logger = Logger(config=config)
     logger.intro()
 
-    logger.log(ActionLogEntry('loading data'))
+    logger.log(ActionLogEntry('Loading data'))
 
     loader = DataLoader(config.scene)
     config.check_valid(loader)
 
-    point_cloud = PointCloud(loader.K)
-    camera_gluer = CameraGluer(loader, point_cloud, config=config, rng=rng, logger=logger)
+    camera_gluer = CameraGluer(loader, config=config, rng=rng, logger=logger)
 
     camera_gluer.initial(config.img1, config.img2)
     while None in camera_gluer.cameras.values():
         camera_gluer.append_camera()
 
+    cameras, point_cloud = camera_gluer.get_result()
+
     plotter = Plotter3D(hide_axes=True, aspect_equal=True)
     plotter.add_points(point_cloud.get_all())
     plotter.add_cameras(camera_gluer.get_cameras())
 
+    logger.log(ActionLogEntry('FINISHED: All cameras glued'))
+
     if config.outpath is None:
         plotter.show()
     else:
-        os.makedirs(config.outpath, exist_ok=True)
-        plotter.save(outfile=os.path.join(config.outpath, 'scene.png'))
-        logger.dump(config.outpath)
-        ply_export(point_cloud, camera_gluer.get_cameras(), os.path.join(config.outpath, 'scene'))
+        outpath = os.path.join(config.outpath, config.scene)
+        os.makedirs(outpath, exist_ok=True)
+        logger.dump(path=outpath)
+        plotter.save(outfile=os.path.join(outpath, 'sparse.png'))
+        point_cloud.save(outpath=outpath, name='sparse')
+        for c in cameras:
+            c.save(outpath=outpath)

@@ -2,23 +2,23 @@ import sys
 import os
 import numpy as np
 
-from inout import Plotter, DataLoader, Logger
+from inout import Plotter, DataLoader, Logger, ActionLogEntry
 from inout import DataLoader
 from estimation import EpipolarEstimator
 from utils import Config
 
 
 if __name__ == "__main__":
-
     config = Config(sys.argv)
-
-    rng = np.random.default_rng(seed=config.seed)
-
-    loader = DataLoader(config.scene)
-    config.check_valid(loader)
 
     logger = Logger(config=config)
     logger.intro()
+
+    rng = np.random.default_rng(seed=config.seed)
+
+    logger.log(ActionLogEntry('Loading data'))
+    loader = DataLoader(config.scene)
+    config.check_valid(loader)
 
     corr1, corr2 = loader.get_corresp(config.img1, config.img2)
 
@@ -60,10 +60,10 @@ if __name__ == "__main__":
             plotter.add_point(corr_in[i][:, k], color=color, size=10, row=r, col=3)
             plotter.add_line(l, color=color, linewidth=1, row=r, col=3)
 
-    logger.dump()
-
     if config.outpath is None:
         plotter.show()
     else:
         os.makedirs(config.outpath, exist_ok=True)
-        plotter.save(outfile=os.path.join(config.outpath, 'img.png'))
+        logger.dump(config.outpath)
+        estimate.save(config.outpath)
+        plotter.save(outfile=os.path.join(config.outpath, f'epipolar_{config.img1}_{config.img2}.png'))

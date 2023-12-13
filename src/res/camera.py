@@ -1,8 +1,11 @@
 from __future__ import annotations
 from typing import Callable
 
+import os
+
 import numpy as np
 import scipy.optimize as opt
+
 from utils import toolbox as tb
 
 
@@ -85,9 +88,11 @@ class Camera:
         self.t = t
         self.P_Kless = P_Kless
         self.P = self.K @ self.P_Kless
+        self.image = -1
         self.order = -1
 
-    def set_order(self, order: int) -> None:
+    def set_image_order(self, image: int, order: int) -> None:
+        self.image = image
         self.order = order
 
     def decompose(self) -> tuple[np.ndarray, np.ndarray]:
@@ -109,3 +114,11 @@ class Camera:
         def err(reprojected): return np.sum(Camera.reprojection_error(image_inliers, reprojected))
         res = opt.fmin(Camera._opt_P, x0=x0, args=(self, scene_inliers, err))
         return Camera.from_params(self, res)
+
+    def save(self, outpath: str) -> None:
+        outpath = os.path.join(outpath, f'camera_i{self.image}_o{self.order}')
+        os.makedirs(outpath, exist_ok=True)
+        np.savetxt(os.path.join(outpath, 'P.txt'), self.P)
+        np.savetxt(os.path.join(outpath, 'K.txt'), self.K)
+        np.savetxt(os.path.join(outpath, 'R.txt'), self.R)
+        np.savetxt(os.path.join(outpath, 't.txt'), self.t)

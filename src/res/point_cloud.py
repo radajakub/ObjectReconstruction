@@ -1,7 +1,9 @@
 import numpy as np
+import os
 
 import utils.toolbox as tb
 from .camera import Camera
+from packages import ge as ge
 
 
 class PointCloud:
@@ -60,3 +62,13 @@ class PointCloud:
 
     def get_all(self) -> np.ndarray:
         return tb.p2e(self.points)
+
+    def save(self, outpath: str, name: str = 'points') -> str:
+        outpath = os.path.join(outpath, 'point_cloud')
+        os.makedirs(outpath, exist_ok=True)
+        # export to ply
+        g = ge.GePly(os.path.join(outpath, f'{name}.ply'))
+        g.points(self.get_all())
+        g.close()
+        # save numpy points
+        np.savetxt(os.path.join(outpath, f'{name}.txt'), self.get_all())

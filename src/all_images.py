@@ -1,4 +1,5 @@
 import sys
+import os
 
 from inout import DataLoader, Plotter
 from utils import Config
@@ -15,4 +16,8 @@ if __name__ == "__main__":
         plotter.add_image(im, row=r, col=c)
         plotter.set_title(f'Image {id}', row=r, col=c)
 
-    plotter.show()
+    if config.outpath is None:
+        plotter.show()
+    else:
+        os.makedirs(config.outpath, exist_ok=True)
+        plotter.save(outfile=os.path.join(config.outpath, 'all_images.png'))

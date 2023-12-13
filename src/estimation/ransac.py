@@ -9,22 +9,12 @@ from utils import Config
 
 
 class Estimate:
-    @staticmethod
-    def load(folder: str) -> Estimate:
-        if not (os.path.exists(folder) and os.path.isdir(folder)):
-            raise FileNotFoundError(f'folder {folder} does not exist or is not a directory')
-        M = np.loadtxt(os.path.join(folder, 'M.txt'))
-        inliers = np.loadtxt(os.path.join(folder, 'inliers.txt'), dtype=int)
-        return Estimate(M, inliers)
-
     def __init__(self, M: np.ndarray, inlier_indices: np.ndarray) -> None:
         self.M = M
         self.inlier_indices = inlier_indices
 
-    def save(self, folder: str) -> None:
-        os.makedirs(folder, exist_ok=True)
-        np.savetxt(os.path.join(folder, 'M.txt'), self.M)
-        np.savetxt(os.path.join(folder, 'inliers.txt'), self.inlier_indices)
+    def __str__(self) -> str:
+        return f'Estimate M: {self.M} with inlier count: {self.inlier_indices.shape[0]}'
 
 
 class RANSAC:

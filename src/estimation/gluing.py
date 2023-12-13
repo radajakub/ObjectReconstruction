@@ -26,11 +26,11 @@ class GlobalPoseEstimate:
 
 
 class CameraGluer(RANSAC):
-    def __init__(self, loader: DataLoader, point_cloud: PointCloud, config: Config, rng: np.random.Generator = None, logger: Logger = None) -> None:
+    def __init__(self, loader: DataLoader, config: Config, rng: np.random.Generator = None, logger: Logger = None) -> None:
         super().__init__(model=GlobalPose(loader.K), config=config, rng=rng)
         self.logger = logger
         self.loader = loader
-        self.point_cloud = point_cloud
+        self.point_cloud = PointCloud(loader.K)
         self.epipolar_estimator = EpipolarEstimator(self.loader.K, config, rng, logger)
         self.pose_threshold = config.pose_threshold
         self.reprojection_threshold = config.reprojection_threshold
@@ -45,14 +45,17 @@ class CameraGluer(RANSAC):
 
     def add_camera(self, P: Camera, img: int) -> None:
         self.count += 1
-        P.set_order(self.count)
+        P.set_image_order(img, self.count)
         self.cameras[img] = P
 
     def get_cameras(self) -> list[Camera]:
-        return [camera for camera in self.cameras.values() if camera is not None]
+        return sorted([camera for camera in self.cameras.values() if camera is not None], key=lambda p: p.order)
 
     def get_camera_count(self) -> int:
         return self.count
+
+    def get_result(self) -> tuple[list[Camera], PointCloud]:
+        return self.get_cameras(), self.point_cloud
 
     def initialize_manipulator(self) -> None:
         # initialize cameras

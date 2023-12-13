@@ -12,18 +12,6 @@ from utils import Config
 
 
 class EpipolarEstimate(Estimate):
-    folder = 'epipolar'
-
-    @staticmethod
-    def load(folder: str) -> EpipolarEstimate:
-        if not (os.path.exists(folder) and os.path.isdir(folder)):
-            raise FileNotFoundError(f'folder {folder} does not exist or is not a directory')
-        E = np.loadtxt(os.path.join(folder, 'E.txt'))
-        R = np.loadtxt(os.path.join(folder, 'R.txt'))
-        t = np.loadtxt(os.path.join(folder, 't.txt'))
-        inliers = np.loadtxt(os.path.join(folder, 'inliers.txt'), dtype=int)
-        return EpipolarEstimate(E, R, t, inliers)
-
     def __init__(self, model: EssentialMatrix, E: np.ndarray, R: np.ndarray, t: np.ndarray, inlier_indices: np.ndarray) -> None:
         self.model = model
         self.E = E
@@ -60,14 +48,6 @@ class EpipolarEstimate(Estimate):
         res += self.t.__str__() + '\n'
         res += f'number of inliers: {self.inlier_indices.shape[0]}\n'
         return res
-
-    def save(self, path: str) -> None:
-        folder = os.path.join(path, EpipolarEstimate.folder)
-        os.makedirs(folder, exist_ok=True)
-        np.savetxt(os.path.join(folder, 'E.txt'), self.E)
-        np.savetxt(os.path.join(folder, 'R.txt'), self.R)
-        np.savetxt(os.path.join(folder, 't.txt'), self.t)
-        np.savetxt(os.path.join(folder, 'inliers.txt'), self.inlier_indices, fmt='%i')
 
 
 class EpipolarEstimator(RANSAC):
