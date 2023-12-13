@@ -12,6 +12,8 @@ from utils import Config
 
 
 class EpipolarEstimate(Estimate):
+    folder = 'epipolar'
+
     @staticmethod
     def load(folder: str) -> EpipolarEstimate:
         if not (os.path.exists(folder) and os.path.isdir(folder)):
@@ -34,11 +36,11 @@ class EpipolarEstimate(Estimate):
         mask[self.inlier_indices] = True
         return mask
 
-    def get_camera(self) -> np.ndarray:
+    def to_camera(self) -> np.ndarray:
         return Camera.from_Rt(self.model.K, self.R, self.t)
 
-    def get_cameras(self) -> tuple[Camera, Camera]:
-        return Camera.zero_camera(self.model.K), self.get_camera()
+    def to_cameras(self) -> tuple[Camera, Camera]:
+        return Camera.zero_camera(self.model.K), self.to_camera()
 
     def get_inliers(self, corr1: np.ndarray, corr2: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         mask = self._get_mask(corr1.shape[1])
@@ -56,9 +58,11 @@ class EpipolarEstimate(Estimate):
         res += self.R.__str__() + '\n'
         res += 't:\n'
         res += self.t.__str__() + '\n'
+        res += f'number of inliers: {self.inlier_indices.shape[0]}\n'
         return res
 
-    def save(self, folder: str) -> None:
+    def save(self, path: str) -> None:
+        folder = os.path.join(path, EpipolarEstimate.folder)
         os.makedirs(folder, exist_ok=True)
         np.savetxt(os.path.join(folder, 'E.txt'), self.E)
         np.savetxt(os.path.join(folder, 'R.txt'), self.R)
@@ -119,7 +123,7 @@ class EpipolarEstimator(RANSAC):
                 supp = self.model.support(inlier_eps, threshold=self.threshold)
                 if supp <= best_supp:
                     self.logger.log(EpipolarEstimateLogEntry(iteration=self.it,
-                                    inliers=inliers.sum(), support=supp, visible=-1, Nmax=Nmax))
+                                    inliers=inliers.sum(), support=supp, visible=0, Nmax=Nmax))
                     continue
 
                 # compute inlier indices

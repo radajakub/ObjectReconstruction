@@ -2,7 +2,7 @@ import sys
 import os
 import numpy as np
 
-from inout import DataLoader, Logger, Plotter3D, ply_export
+from inout import DataLoader, Logger, Plotter3D, ply_export, ActionLogEntry
 from utils import Config
 from estimation import PointCloud, CameraGluer
 
@@ -11,11 +11,13 @@ if __name__ == "__main__":
 
     rng = np.random.default_rng(seed=config.seed)
 
-    loader = DataLoader(config.scene)
-    config.check_valid(loader)
-
     logger = Logger(config=config)
     logger.intro()
+
+    logger.log(ActionLogEntry('loading data'))
+
+    loader = DataLoader(config.scene)
+    config.check_valid(loader)
 
     point_cloud = PointCloud(loader.K)
     camera_gluer = CameraGluer(loader, point_cloud, config=config, rng=rng, logger=logger)
@@ -33,4 +35,5 @@ if __name__ == "__main__":
     else:
         os.makedirs(config.outpath, exist_ok=True)
         plotter.save(outfile=os.path.join(config.outpath, 'scene.png'))
+        logger.dump(config.outpath)
         ply_export(point_cloud, camera_gluer.get_cameras(), os.path.join(config.outpath, 'scene'))

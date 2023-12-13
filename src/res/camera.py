@@ -59,7 +59,6 @@ class Camera:
         NP = Camera.from_params(P, params)
         reprojected = NP.project(scene_points)
         err = err_fun(reprojected)
-        print(err)
         return err
 
     @staticmethod

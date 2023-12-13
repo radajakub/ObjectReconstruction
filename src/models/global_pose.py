@@ -18,7 +18,7 @@ class GlobalPose(Model):
             Rts.append(p3p.XX2Rt_simple(X, X_))
         return Rts
 
-    def camera_error(self, X: np.ndarray, u: np.ndarray, c: Camera) -> np.ndarray:
+    def error(self, X: np.ndarray, u: np.ndarray, c: Camera) -> np.ndarray:
         return Camera.reprojection_error(u, c.project(X))
 
     def support(self, inlier_errors: np.ndarray, threshold: float) -> int:

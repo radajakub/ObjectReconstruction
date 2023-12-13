@@ -1,5 +1,4 @@
 import numpy as np
-import scipy.optimize as opt
 
 from packages.corresp import Corresp
 
@@ -7,7 +6,7 @@ from .ransac import RANSAC
 from .epipolar import EpipolarEstimator
 from res import Camera, PointCloud
 from utils import Config, toolbox as tb
-from inout import Logger, DataLoader, CameraGluerLogEntry
+from inout import Logger, DataLoader, CameraGluerLogEntry, GlobalPoseLogEntry, ActionLogEntry
 from models import GlobalPose
 
 
@@ -53,7 +52,7 @@ class CameraGluer(RANSAC):
         return [camera for camera in self.cameras.values() if camera is not None]
 
     def get_camera_count(self) -> int:
-        return sum([1 for camera in self.cameras.values() if camera is not None])
+        return self.count
 
     def initialize_manipulator(self) -> None:
         # initialize cameras
@@ -66,12 +65,14 @@ class CameraGluer(RANSAC):
                     self.manipulator.add_pair(i - 1, j - 1, mij)
 
     def initial(self, img1: int, img2: int) -> None:
+        self.logger.log(ActionLogEntry('Gluing initial camera pair'))
         # (1) The set of selected cameras is empty.
         self.reset_cameras()
 
         # (2) Choose a pair of images I1 a I2 -> done from Config
 
         # (3) Find the relative pose and orientation (R,t), choose (nonzero) scale, e.g., choose length of base equal to 1.
+        self.logger.log(ActionLogEntry('Estimate epipolar geometry'))
         m1, m2 = self.manipulator.get_m(img1 - 1, img2 - 1)
         corr1 = self.loader.get_points(img1, m1)
         corr2 = self.loader.get_points(img2, m2)
@@ -80,7 +81,7 @@ class CameraGluer(RANSAC):
         # (4) Choose the global coordinate system such that it is equal to the coordinate system of the first camera.
         # Construct the cameras P1 and P2.
         # Put these cameras into the set of selected cameras.
-        P1, P2 = estimate.get_cameras()
+        P1, P2 = estimate.to_cameras()
         self.add_camera(P1, img1)
         self.add_camera(P2, img2)
 
@@ -90,6 +91,7 @@ class CameraGluer(RANSAC):
 
         # (6) Refine the camera set {P1, P2} together with the point cloud using bundle adjustment.
         # fmin scipy on sampson error with minimal representation
+        self.logger.log(ActionLogEntry('Refine camera pair'))
         P1, P2 = Camera.refine_pair(P1, P2, corr_in_1, corr_in_2)
 
         # (5) Reconstruct the 3D point cloud using inlier correspondences between the images I1 and I2 using the cameras P1 and P2 (the points must be in front of both cameras)
@@ -98,9 +100,10 @@ class CameraGluer(RANSAC):
 
         self.manipulator.start(img1 - 1, img2 - 1, estimate.inlier_indices, scene_indices)
 
-        self.logger.log(CameraGluerLogEntry([img1, img2]))
+        self.logger.log(CameraGluerLogEntry(self.point_cloud.get_size(), img1, img2))
 
     def append_camera(self) -> None:
+        self.logger.log(ActionLogEntry('Append a new camera'))
         # (1) Select an image (Ij) that has not a camera estimated yet
         Is, counts = self.manipulator.get_green_cameras()
         # add 1 to get it into my indexing for consistency
@@ -112,6 +115,7 @@ class CameraGluer(RANSAC):
         image_points = tb.e2p(self.loader.get_points(Ij, corr_indices))
 
         # (3) Estimate the global pose and orientation of the camera Pj using the P3P algorithm in RANSAC scheme
+        self.logger.log(ActionLogEntry('Estimate global pose of the camera'))
         estimate = self.fit(scene_points, image_points)
 
         # (4) Insert the camera Pj into the set of selected cameras
@@ -121,6 +125,7 @@ class CameraGluer(RANSAC):
         scene_inliers = scene_points[:, estimate.inlier_indices]
         image_inliers = image_points[:, estimate.inlier_indices]
 
+        self.logger.log(ActionLogEntry('Refine the new camera'))
         Pj = Pj.refine(scene_inliers, image_inliers)
 
         self.add_camera(Pj, Ij)
@@ -138,8 +143,8 @@ class CameraGluer(RANSAC):
 
             # reproject and threshold reprojection error
             X = tb.Pu2X(Pj.P, Pi.P, corrj, corri)
-            ej = self.model.camera_error(X, corrj, Pj)
-            ei = self.model.camera_error(X, corri, Pi)
+            ej = self.model.error(X, corrj, Pj)
+            ei = self.model.error(X, corri, Pi)
             correct = np.logical_and(ej < self.reprojection_threshold, ei < self.reprojection_threshold)
             corrj = corrj[:, correct]
             corri = corri[:, correct]
@@ -154,14 +159,15 @@ class CameraGluer(RANSAC):
             u = tb.e2p(self.loader.get_points(Ii, uid))
 
             # Verify (by reprojection error) scene-to-image correspondences in Xu_tentative. A subset of good points is obtained
-            e = self.model.camera_error(X, u, Pi)
-            indices = np.arange(X.shape[1])
+            e = self.model.error(X, u, Pi)
             inl = np.logical_and(~Xu_verified, e < self.reprojection_threshold)
-            curr_ok = indices[inl]
+            curr_ok = np.arange(X.shape[1])[inl]
 
             self.manipulator.verify_x(Ii - 1, curr_ok)
 
         self.manipulator.finalize_camera()
+
+        self.logger.log(CameraGluerLogEntry(self.point_cloud.get_size(), Ij))
 
     def fit(self, scene_points: np.ndarray, image_points: np.ndarray) -> GlobalPoseEstimate:
         assert (scene_points.shape[1] == image_points.shape[1])
@@ -204,7 +210,7 @@ class CameraGluer(RANSAC):
                     continue
 
                 # (6c) Compute reprojection error
-                err = self.model.camera_error(visible_scene_points, visible_image_points, P)
+                err = self.model.error(visible_scene_points, visible_image_points, P)
                 inliers = err < np.power(self.pose_threshold, 2)
                 inlier_indices = visible_indices[inliers]
                 support = self.model.support(err[inliers], self.pose_threshold)
@@ -213,5 +219,8 @@ class CameraGluer(RANSAC):
                     best_estimate = GlobalPoseEstimate(R, t, inlier_indices)
                     eps = 1 - inlier_indices.shape[0] / N
                     Nmax = 0 if eps == 0 else (np.log(1 - self.p) / np.log(1 - np.power(1 - eps, 3)))
+
+                self.logger.log(GlobalPoseLogEntry(iteration=self.it, inliers=inliers.sum(),
+                                visible=visible_indices.shape[0], support=support, Nmax=Nmax))
 
         return best_estimate

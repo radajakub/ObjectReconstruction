@@ -1,4 +1,5 @@
 import time
+import os
 
 from utils import Config
 
@@ -15,6 +16,15 @@ class LogEntry:
         self.time = round(time.process_time() - start_time, 4)
 
 
+class ActionLogEntry(LogEntry):
+    def __init__(self, action: str) -> None:
+        super().__init__(label='Action')
+        self.action = action
+
+    def __str__(self) -> str:
+        return f'(Action) [{self.time}] | {self.action}'
+
+
 class EpipolarEstimateLogEntry(LogEntry):
     def __init__(self, iteration: int, inliers: int, support: float, visible: int,  Nmax: float) -> None:
         super().__init__(label='EpipolarEstimate')
@@ -25,7 +35,7 @@ class EpipolarEstimateLogEntry(LogEntry):
         self.Nmax = Nmax
 
     def __str__(self) -> None:
-        return f'({self.label}) [{self.time} | it: {self.iteration}] inliers: {self.inliers}, support: {self.support}, visible: {"-" if self.visible == -1 else self.visible}, Nmax: {self.Nmax}'
+        return f'({self.label}) [{self.time}] | it: {self.iteration}] inliers: {self.inliers}, support: {self.support}, visible: {"-" if self.visible == 0 else self.visible}, Nmax: {self.Nmax}'
 
 
 class RANSACLogEntry(LogEntry):
@@ -36,35 +46,44 @@ class RANSACLogEntry(LogEntry):
         self.support = support
         self.Nmax = Nmax
 
-    def __str__(self) -> None:
-        return f'({self.label}) [{self.time} | it: {self.iteration}] inliers: {self.inliers}, support: {self.support}, Nmax: {self.Nmax}'
+    def __str__(self) -> str:
+        return f'({self.label}) [{self.time}] | it: {self.iteration}] inliers: {self.inliers}, support: {self.support}, Nmax: {self.Nmax}'
 
 
 class CameraGluerLogEntry(LogEntry):
-    def __init__(self, camera_ids: list[int]) -> None:
+    def __init__(self, points: int, P1: int, P2: int = None) -> None:
         super().__init__(label='CameraGluer')
-        self.camera_ids = camera_ids
+        self.P1 = P1
+        self.P2 = P2
+        self.points = points
 
-    def __str__(self) -> None:
-        if len(self.camera_ids) == 2:
-            return f'({self.label}) [{self.time}] initialized with cameras {self.camera_ids[0]} and {self.camera_ids[1]}'
-        return f'({self.label}) [{self.time}] glued camera {self.camera_ids[0]}'
+    def __str__(self) -> str:
+        if self.P2 is not None:
+            return f'({self.label}) [{self.time}] initialized with cameras {self.P1} and {self.P2}, scene points : {self.points}'
+        return f'({self.label}) [{self.time}] glued camera {self.P1}, scene points : {self.points}'
+
+
+class GlobalPoseLogEntry(LogEntry):
+    def __init__(self, iteration: int, inliers: int, visible: int, support: float, Nmax: float) -> None:
+        super().__init__(label='GlobalPose')
+        self.iteration = iteration
+        self.inliers = inliers
+        self.visible = visible
+        self.support = support
+        self.Nmax = Nmax
+
+    def __str__(self) -> str:
+        return f'({self.label}) [{self.time}] | it: {self.iteration}] inliers: {self.inliers}, support: {self.support}, visible: {"-" if self.visible == 0 else self.visible}, Nmax: {self.Nmax}'
 
 
 class Logger:
-    def __init__(self, config: Config = None) -> None:
-        self.start_time = time.process_time()
+    def __init__(self, config: Config) -> None:
         self.config = config
-        self.logs = []
-        self.improves = []
+        self.log_clean()
 
     def log_clean(self) -> None:
         self.start_time = time.process_time()
         self.logs = []
-        self.improves = []
-
-    def log_end(self, last_iteration: int) -> None:
-        self.last_iteration = last_iteration
 
     def log(self, entry: LogEntry) -> None:
         entry.add_timestamp(start_time=self.start_time)
@@ -73,11 +92,11 @@ class Logger:
             print(entry)
 
     def intro(self) -> None:
-        if self.config is not None and not self.config.silent:
+        if not self.config.silent:
             print(self.config)
 
-    def dump(self) -> None:
-        print('ESTIMATION')
-        for log in self.logs:
-            print(log)
-        print()
+    def dump(self, path: str) -> None:
+        os.makedirs(path, exist_ok=True)
+        with open(os.path.join(path, 'estimation.log'), 'w') as f:
+            for log in self.logs:
+                f.write(f'{str(log)} + \n')

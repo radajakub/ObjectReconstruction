@@ -66,12 +66,12 @@ class RANSAC:
             # compute support
             supp = self.model.support(eps[inlier_indices])
 
-            self.logger.log(RANSACLogEntry(self.it, Ni, supp, Nmax))
-
             if supp > best_support:
                 best_support = supp
                 best_M = Mk
                 Nmax = self._criterion(Ni / N)
+
+            self.logger.log(RANSACLogEntry(self.it, Ni, supp, Nmax))
 
         # fit to best inliers
         best_M = self.model.hypothesis(X[:, self.model.error(best_M, X) < self.threshold])
