@@ -4,7 +4,7 @@ from packages.corresp import Corresp
 
 from .ransac import RANSAC
 from .epipolar import EpipolarEstimator
-from res import Camera, PointCloud
+from res import Camera, PointCloud, CameraSet
 from utils import Config, toolbox as tb
 from inout import Logger, DataLoader, CameraGluerLogEntry, GlobalPoseLogEntry, ActionLogEntry
 from models import GlobalPose
@@ -30,7 +30,6 @@ class CameraGluer(RANSAC):
         super().__init__(model=GlobalPose(loader.K), config=config, rng=rng)
         self.logger = logger
         self.loader = loader
-        self.point_cloud = PointCloud(loader.K)
         self.epipolar_estimator = EpipolarEstimator(self.loader.K, config, rng, logger)
         self.pose_threshold = config.pose_threshold
         self.reprojection_threshold = config.reprojection_threshold
@@ -40,22 +39,17 @@ class CameraGluer(RANSAC):
         self.initialize_manipulator()
 
     def reset_cameras(self) -> None:
-        self.cameras = {key: None for key in self.loader.image_ids}
-        self.count = 0
+        self.point_cloud = PointCloud(self.loader.K)
+        self.camera_set = CameraSet(self.loader)
 
-    def add_camera(self, P: Camera, img: int) -> None:
-        self.count += 1
-        P.set_image_order(img, self.count)
-        self.cameras[img] = P
+    def can_add(self) -> bool:
+        return self.camera_set.can_add()
 
-    def get_cameras(self) -> list[Camera]:
-        return sorted([camera for camera in self.cameras.values() if camera is not None], key=lambda p: p.order)
-
-    def get_camera_count(self) -> int:
-        return self.count
+    def add_camera(self, img: int, P: Camera) -> None:
+        self.camera_set.add_camera(image=img, camera=P)
 
     def get_result(self) -> tuple[list[Camera], PointCloud]:
-        return self.get_cameras(), self.point_cloud
+        return self.camera_set, self.point_cloud
 
     def initialize_manipulator(self) -> None:
         # initialize cameras
@@ -85,8 +79,8 @@ class CameraGluer(RANSAC):
         # Construct the cameras P1 and P2.
         # Put these cameras into the set of selected cameras.
         P1, P2 = estimate.to_cameras()
-        self.add_camera(P1, img1)
-        self.add_camera(P2, img2)
+        self.add_camera(img1, P1)
+        self.add_camera(img2, P2)
 
         corr_in_1, corr_in_2 = estimate.get_inliers(corr1, corr2)
         corr_in_1 = tb.e2p(corr_in_1)
@@ -131,14 +125,14 @@ class CameraGluer(RANSAC):
         self.logger.log(ActionLogEntry('Refine the new camera'))
         Pj = Pj.refine(scene_inliers, image_inliers)
 
-        self.add_camera(Pj, Ij)
+        self.add_camera(Ij, Pj)
 
         self.manipulator.join_camera(Ij - 1, estimate.inlier_indices)
 
         # (6) Find correspondences from between Ij and the images of selected cameras, that have not 3D point yet and reconstruct new 3D points and add them to the point cloud
         for Ii in self.manipulator.get_cneighbours(Ij - 1) + 1:
             mj, mi = self.manipulator.get_m(Ij - 1, Ii - 1)
-            Pi = self.cameras[Ii]
+            Pi = self.camera_set.get_camera(Ii)
 
             # Reconstruct new scene points using the cameras i and ic and image-to-image correspondences m
             corrj = tb.e2p(self.loader.get_points(Ij, mj))
@@ -156,7 +150,7 @@ class CameraGluer(RANSAC):
             self.manipulator.new_x(Ij - 1, Ii - 1, np.arange(X.shape[1])[correct], scene_indices)
 
         for Ii in self.manipulator.get_selected_cameras() + 1:
-            Pi = self.cameras[Ii]
+            Pi = self.camera_set.get_camera(Ii)
             Xid, uid, Xu_verified = self.manipulator.get_Xu(Ii - 1)
             X = tb.e2p(self.point_cloud.get_points(Xid))
             u = tb.e2p(self.loader.get_points(Ii, uid))

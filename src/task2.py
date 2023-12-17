@@ -22,14 +22,16 @@ if __name__ == "__main__":
     camera_gluer = CameraGluer(loader, config=config, rng=rng, logger=logger)
 
     camera_gluer.initial(config.img1, config.img2)
-    while None in camera_gluer.cameras.values():
+    while camera_gluer.can_add():
         camera_gluer.append_camera()
 
-    cameras, point_cloud = camera_gluer.get_result()
+    camera_set, point_cloud = camera_gluer.get_result()
+
+    cameras = camera_set.get_cameras()
 
     plotter = Plotter3D(hide_axes=True, aspect_equal=True)
     plotter.add_points(point_cloud.get_all())
-    plotter.add_cameras(camera_gluer.get_cameras())
+    plotter.add_cameras(cameras)
 
     logger.log(ActionLogEntry('FINISHED: All cameras glued'))
 
@@ -41,5 +43,3 @@ if __name__ == "__main__":
         logger.dump(path=outpath)
         plotter.save(outfile=os.path.join(outpath, 'sparse.png'))
         point_cloud.save(outpath=outpath, name='sparse')
-        for c in cameras:
-            c.save(outpath=outpath)
