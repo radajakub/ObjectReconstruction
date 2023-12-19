@@ -72,10 +72,13 @@ class Config:
         if self.inpath is not None:
             self.inpath = os.path.join(self.inpath, self.scene)
 
-    def check_valid(self, loader: DataLoader):
-        if self.img1 is not None and self.img2 is not None:
-            if self.img1 > loader.image_num or self.img2 > loader.image_num or self.img1 < 1 or self.img2 < 1:
-                raise ValueError(f'invalid image id -> must be between 1 and {loader.image_num} (including)')
+    def check_images_correct(self, loader: DataLoader):
+        if self.img1 > loader.image_num or self.img2 > loader.image_num or self.img1 < 1 or self.img2 < 1:
+            raise ValueError(f'invalid image id -> must be between 1 and {loader.image_num} (including)')
+
+    def check_images_given(self, loader: DataLoader):
+        if self.img1 is None or self.img2 is None:
+            raise ValueError('img1 and img2 must be specified for epipolar estimation')
 
     def __str__(self) -> str:
         res = 'config:'

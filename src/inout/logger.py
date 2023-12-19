@@ -97,6 +97,6 @@ class Logger:
 
     def dump(self, path: str) -> None:
         os.makedirs(path, exist_ok=True)
-        with open(os.path.join(path, 'output.log'), 'w') as f:
+        with open(os.path.join(path, 'log.txt'), 'w') as f:
             for log in self.logs:
                 f.write(f'{str(log)} + \n')

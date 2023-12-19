@@ -18,7 +18,8 @@ if __name__ == "__main__":
 
     logger.log(ActionLogEntry('Loading data'))
     loader = DataLoader(config.scene)
-    config.check_valid(loader)
+    config.check_images_given(loader)
+    config.check_images_correct(loader)
 
     corr1, corr2 = loader.get_corresp(config.img1, config.img2)
 

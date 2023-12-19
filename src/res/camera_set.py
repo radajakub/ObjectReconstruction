@@ -20,12 +20,10 @@ class CameraSet:
     def load(self, outpath: str) -> None:
         outpath = os.path.join(outpath, 'cameras')
         for folder in os.listdir(outpath):
-            if os.path.isdir(os.path.join(outpath, folder)):
-                camera = Camera.load(outpath, folder)
-                self.cameras[camera.image] = camera
-                self.count = max(self.count, camera.order)
-                self.logger.log(ActionLogEntry(
-                    f'Loaded camera {camera.image} with order {camera.order} from {outpath}'))
+            camera = Camera.load(outpath, folder)
+            self.cameras[camera.image] = camera
+            self.count = max(self.count, camera.order)
+            self.logger.log(ActionLogEntry(f'Loaded camera {camera.image} with order {camera.order} from {outpath}'))
 
     def can_add(self) -> bool:
         return None in self.cameras.values()

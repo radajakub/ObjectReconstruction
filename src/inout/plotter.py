@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import matplotlib
 from PIL import Image
 import numpy as np
 import utils.toolbox as tb
@@ -45,6 +46,12 @@ class Plotter(BasePlotter):
         else:
             kwargs = {}
         self.get_ax(row, col).imshow(image, **kwargs)
+
+    def add_image_nan(self, image: np.ndarray, row: int = 1, col: int = 1):
+        masked_array = np.ma.array(image, mask=np.isnan(image))
+        cmap = plt.cm.get_cmap('viridis')
+        cmap.set_bad('black', 1.)
+        self.get_ax(row, col).imshow(masked_array, interpolation='nearest', cmap=cmap)
 
     def add_points(self, X: np.ndarray, color: str = 'black', marker='o', size: float = 1.0, row: int = 1, col: int = 1):
         assert len(X.shape) == 2

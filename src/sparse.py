@@ -17,7 +17,8 @@ if __name__ == "__main__":
     logger.log(ActionLogEntry('Loading data'))
 
     loader = DataLoader(config.scene)
-    config.check_valid(loader)
+    config.check_images_given(loader)
+    config.check_images_correct(loader)
 
     camera_gluer = CameraGluer(loader, config=config, rng=rng, logger=logger)
 
@@ -28,7 +29,7 @@ if __name__ == "__main__":
     camera_set, point_cloud = camera_gluer.get_result()
 
     stereo = StereoMatcher(config, loader, camera_set, point_cloud, logger)
-    stereo.prepare_disparities()
+    stereo.start_disparities()
 
     plotter = Plotter3D(hide_axes=True, aspect_equal=True)
     plotter.add_points(point_cloud.sparse_get_all())
