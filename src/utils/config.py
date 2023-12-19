@@ -1,3 +1,5 @@
+import os
+
 from inout import DataLoader
 
 
@@ -9,6 +11,7 @@ class Config:
     default_max_iter = 1000
     default_pose_threshold = 3
     default_reprojection_threshold = 3
+    default_fundamental_threshold = 0.05
 
     def __init__(self, argv: list[str]) -> None:
         args = argv[1:]
@@ -20,6 +23,7 @@ class Config:
         self.img1 = None
         self.img2 = None
         self.outpath = None
+        self.inpath = None
         self.seed = None
         self.threshold = Config.default_threshold
         self.p = Config.default_p
@@ -27,6 +31,8 @@ class Config:
         self.silent = False
         self.pose_threshold = Config.default_threshold
         self.reprojection_threshold = Config.default_reprojection_threshold
+        self.fundamental_threshold = Config.default_fundamental_threshold
+
         for i in range(0, len(args), 2):
             key, val = args[i], args[i+1]
             key = key.strip('-')
@@ -38,6 +44,8 @@ class Config:
                 self.img2 = int(val)
             elif key == 'out':
                 self.outpath = val
+            elif key == 'in':
+                self.inpath = val
             elif key == 'seed':
                 self.seed = int(val)
             elif key == 'threshold':
@@ -46,6 +54,8 @@ class Config:
                 self.pose_threshold = float(val)
             elif key == 'reprojection-threshold':
                 self.reprojection_threshold = float(val)
+            elif key == 'fundamental-threshold':
+                self.fundamental_threshold = float(val)
             elif key == 'p':
                 self.p = float(val)
             elif key == 'max_iter':
@@ -56,11 +66,16 @@ class Config:
         if self.scene is None:
             raise ValueError('scene not specified')
 
+        if self.outpath is not None:
+            self.outpath = os.path.join(self.outpath, self.scene)
+
+        if self.inpath is not None:
+            self.inpath = os.path.join(self.inpath, self.scene)
+
     def check_valid(self, loader: DataLoader):
-        if self.img1 is None or self.img2 is None:
-            raise ValueError('img1 and img2 must be specified')
-        if self.img1 > loader.image_num or self.img2 > loader.image_num or self.img1 < 1 or self.img2 < 1:
-            raise ValueError(f'invalid image id -> must be between 1 and {loader.image_num} (including)')
+        if self.img1 is not None and self.img2 is not None:
+            if self.img1 > loader.image_num or self.img2 > loader.image_num or self.img1 < 1 or self.img2 < 1:
+                raise ValueError(f'invalid image id -> must be between 1 and {loader.image_num} (including)')
 
     def __str__(self) -> str:
         res = 'config:'
@@ -75,4 +90,6 @@ class Config:
         res += f'---- threshold {self.pose_threshold}\n'
         res += f'-- reprojection params\n'
         res += f'---- threshold {self.reprojection_threshold}\n'
+        res += f'-- stereo matching params\n'
+        res += f'---- threshold {self.fundamental_threshold}\n'
         return res

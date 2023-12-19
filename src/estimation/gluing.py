@@ -39,8 +39,8 @@ class CameraGluer(RANSAC):
         self.initialize_manipulator()
 
     def reset_cameras(self) -> None:
-        self.point_cloud = PointCloud(self.loader.K)
-        self.camera_set = CameraSet(self.loader)
+        self.point_cloud = PointCloud(self.loader.K, logger=self.logger)
+        self.camera_set = CameraSet(self.loader, logger=self.logger)
 
     def can_add(self) -> bool:
         return self.camera_set.can_add()
@@ -108,7 +108,7 @@ class CameraGluer(RANSAC):
 
         # (2) Find image points in Ij, that correspond to some allready reconstructed 3D points in the cloud
         point_indices, corr_indices, _ = self.manipulator.get_Xu(Ij - 1)
-        scene_points = tb.e2p(self.point_cloud.get_points(point_indices))
+        scene_points = tb.e2p(self.point_cloud.sparse_get_points(point_indices))
         image_points = tb.e2p(self.loader.get_points(Ij, corr_indices))
 
         # (3) Estimate the global pose and orientation of the camera Pj using the P3P algorithm in RANSAC scheme
@@ -152,7 +152,7 @@ class CameraGluer(RANSAC):
         for Ii in self.manipulator.get_selected_cameras() + 1:
             Pi = self.camera_set.get_camera(Ii)
             Xid, uid, Xu_verified = self.manipulator.get_Xu(Ii - 1)
-            X = tb.e2p(self.point_cloud.get_points(Xid))
+            X = tb.e2p(self.point_cloud.sparse_get_points(Xid))
             u = tb.e2p(self.loader.get_points(Ii, uid))
 
             # Verify (by reprojection error) scene-to-image correspondences in Xu_tentative. A subset of good points is obtained

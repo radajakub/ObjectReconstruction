@@ -10,6 +10,32 @@ from utils import toolbox as tb
 
 
 class Camera:
+    P_KLESS_FILE = 'P_Kless'
+    K_FILE = 'K'
+    R_FILE = 'R'
+    t_FILE = 't'
+
+    @staticmethod
+    def load(outpath: str, folder: str) -> Camera:
+        outpath = os.path.join(outpath, folder)
+        image, order = Camera.get_image_order_from_filename(folder)
+        P_Kless = np.loadtxt(os.path.join(outpath, f'{Camera.P_KLESS_FILE}.txt'))
+        K = np.loadtxt(os.path.join(outpath, f'{Camera.K_FILE}.txt'))
+        R = np.loadtxt(os.path.join(outpath, f'{Camera.R_FILE}.txt'))
+        t = np.loadtxt(os.path.join(outpath, f'{Camera.t_FILE}.txt'))
+        camera = Camera(K, P_Kless, R, t)
+        camera.image = image
+        camera.order = order
+        return camera
+
+    @staticmethod
+    def CAMERA_FILE_NAME(image: int, order: int) -> str:
+        return f'camera_i{image}_o{order}'
+
+    @staticmethod
+    def get_image_order_from_filename(filename: str) -> int:
+        return tuple(int(part[1:]) for part in filename.split('_')[1:3])
+
     @staticmethod
     def reprojection_error(u: np.ndarray, u_hat: np.ndarray) -> np.ndarray:
         es = []
@@ -116,9 +142,9 @@ class Camera:
         return Camera.from_params(self, res)
 
     def save(self, outpath: str) -> None:
-        outpath = os.path.join(outpath, f'camera_i{self.image}_o{self.order}')
+        outpath = os.path.join(outpath, Camera.CAMERA_FILE_NAME(self.image, self.order))
         os.makedirs(outpath, exist_ok=True)
-        np.savetxt(os.path.join(outpath, 'P.txt'), self.P)
-        np.savetxt(os.path.join(outpath, 'K.txt'), self.K)
-        np.savetxt(os.path.join(outpath, 'R.txt'), self.R)
-        np.savetxt(os.path.join(outpath, 't.txt'), self.t)
+        np.savetxt(os.path.join(outpath, f'{Camera.P_KLESS_FILE}.txt'), self.P_Kless)
+        np.savetxt(os.path.join(outpath, f'{Camera.K_FILE}.txt'), self.K)
+        np.savetxt(os.path.join(outpath, f'{Camera.R_FILE}.txt'), self.R)
+        np.savetxt(os.path.join(outpath, f'{Camera.t_FILE}.txt'), self.t)

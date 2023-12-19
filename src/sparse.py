@@ -4,7 +4,7 @@ import numpy as np
 
 from inout import DataLoader, Logger, Plotter3D, ActionLogEntry
 from utils import Config
-from estimation import CameraGluer
+from estimation import CameraGluer, StereoMatcher
 
 if __name__ == "__main__":
     config = Config(sys.argv)
@@ -27,19 +27,20 @@ if __name__ == "__main__":
 
     camera_set, point_cloud = camera_gluer.get_result()
 
-    cameras = camera_set.get_cameras()
+    stereo = StereoMatcher(config, loader, camera_set, point_cloud, logger)
+    stereo.prepare_disparities()
 
     plotter = Plotter3D(hide_axes=True, aspect_equal=True)
-    plotter.add_points(point_cloud.get_all())
-    plotter.add_cameras(cameras)
+    plotter.add_points(point_cloud.sparse_get_all())
+    plotter.add_cameras(camera_set.get_cameras())
 
-    logger.log(ActionLogEntry('FINISHED: All cameras glued'))
+    logger.log(ActionLogEntry('FINISHED: All cameras glued, sparse point computed and rectified images prepared'))
 
     if config.outpath is None:
         plotter.show()
     else:
-        outpath = os.path.join(config.outpath, config.scene)
+        outpath = config.outpath
         os.makedirs(outpath, exist_ok=True)
         logger.dump(path=outpath)
+        stereo.save()
         plotter.save(outfile=os.path.join(outpath, 'sparse.png'))
-        point_cloud.save(outpath=outpath, name='sparse')

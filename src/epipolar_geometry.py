@@ -65,5 +65,4 @@ if __name__ == "__main__":
     else:
         os.makedirs(config.outpath, exist_ok=True)
         logger.dump(config.outpath)
-        estimate.save(config.outpath)
         plotter.save(outfile=os.path.join(config.outpath, f'epipolar_{config.img1}_{config.img2}.png'))
