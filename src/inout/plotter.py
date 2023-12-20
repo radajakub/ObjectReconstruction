@@ -1,5 +1,5 @@
 import matplotlib.pyplot as plt
-import matplotlib
+import os
 from PIL import Image
 import numpy as np
 import utils.toolbox as tb
@@ -19,6 +19,7 @@ class BasePlotter:
         plt.show()
 
     def save(self, outfile: str):
+        os.makedirs(outfile, exist_ok=True)
         self._prepare()
         self.fig.savefig(outfile, bbox_inches='tight')
 

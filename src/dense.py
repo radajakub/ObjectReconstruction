@@ -20,6 +20,9 @@ if __name__ == "__main__":
 
     stereo = StereoMatcher.load(config, loader, logger)
     stereo.load_disparities()
+    stereo.fill_point_cloud()
+
+    stereo.save()
 
     # plot disparities
     # (1) horizontal

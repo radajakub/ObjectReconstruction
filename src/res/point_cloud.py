@@ -36,6 +36,18 @@ class PointCloud:
             return 0
         return self.sparse.shape[1]
 
+    def add_dense(self, P1: Camera, P2: Camera, corr1: np.ndarray, corr2: np.ndarray) -> int:
+        assert (corr1.shape[0] == 3)
+        assert (corr2.shape[0] == 3)
+
+        corr1, corr2 = tb.u_correct_sampson(Camera.get_fundamental(P1, P2), corr1, corr2)
+        points_3d = tb.Pu2X(P1.P, P2.P, corr1, corr2)
+        if self.dense is None:
+            self.dense = points_3d
+        else:
+            self.dense = np.hstack((self.dense, points_3d))
+        return points_3d.shape[1]
+
     def add(self, P1: Camera, P2: Camera, corr1: np.ndarray, corr2: np.ndarray) -> np.ndarray:
         if corr1.shape[0] == 2:
             corr1 = tb.e2p(corr1)
@@ -95,7 +107,7 @@ class PointCloud:
             return self.sparse_get_all()
         return tb.p2e(np.hstack((self.sparse, self.dense)))
 
-    def save(self, outpath: str, export: bool = False) -> str:
+    def save(self, outpath: str, export: bool = True) -> str:
         outpath = os.path.join(outpath, PointCloud.FOLDER_NAME)
         os.makedirs(outpath, exist_ok=True)
         # save numpy points

@@ -117,8 +117,6 @@ class StereoMatcher:
             u2 = tb.e2p(u2)
             # TODO do sampson or abs
             vals = tb.err_F_sampson(F, u1, u2)
-            print(np.min(vals))
-            # vals = np.array([x.T @ F @ y for x, y in zip(u1.T, u2.T)])
             inlier_indices = vals < self.config.fundamental_threshold
             u1 = u1[:, inlier_indices]
             u2 = u2[:, inlier_indices]
@@ -146,6 +144,27 @@ class StereoMatcher:
         for pair, disparity in zip(StereoMatcher.pairs, scipy.io.loadmat(os.path.join(self.config.inpath, StereoMatcher.RECTIFIED_FOLDER, 'stereo_out.mat'))['D'][:, 0]):
             self.disparities[pair] = disparity
             self.logger.log(ActionLogEntry(f'Load disparity for cameras {pair[0]} and {pair[1]}'))
+
+    def fill_point_cloud(self) -> None:
+        for i1, i2 in StereoMatcher.pairs:
+            disparity = self.disparities[(i1, i2)]
+            corr1 = []
+            corr2 = []
+            # compute correspondences as (x, y) and (x + D[y, x], y)
+            for y, x in np.ndindex(disparity.shape):
+                if not np.isnan(disparity[y, x]):
+                    corr1.append([x, y])
+                    corr2.append([x + disparity[y, x], y])
+            corr1 = tb.e2p(np.array(corr1).T)
+            corr2 = tb.e2p(np.array(corr2).T)
+            # transform points back by inverse of rectifying homographies
+            rectified_data = self.rectified[(i1, i2)]
+            corr1 = np.linalg.inv(rectified_data.H1) @ corr1
+            corr2 = np.linalg.inv(rectified_data.H2) @ corr2
+            # add them to point cloud
+            points = self.point_cloud.add_dense(self.camera_set.get_camera(
+                i1), self.camera_set.get_camera(i2), corr1, corr2)
+            self.logger.log(ActionLogEntry(f'Added {points} dense points for cameras {i1} and {i2}'))
 
     def get_horizontal_disparities(self) -> tuple[list[tuple[int, int]], list[np.ndarray]]:
         return StereoMatcher.pairs[:9], [self.disparities[pair] for pair in StereoMatcher.pairs[:9]]
