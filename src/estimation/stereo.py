@@ -115,7 +115,6 @@ class StereoMatcher:
             # keep only inliers wrt F
             u1 = tb.e2p(u1)
             u2 = tb.e2p(u2)
-            # TODO do sampson or abs
             vals = tb.err_F_sampson(F, u1, u2)
             inlier_indices = vals < self.config.fundamental_threshold
             u1 = u1[:, inlier_indices]
