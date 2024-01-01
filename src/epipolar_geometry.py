@@ -28,6 +28,7 @@ if __name__ == "__main__":
 
     corr_in = estimate.get_inliers(corr1, corr2)
     corr_out = estimate.get_outliers(corr1, corr2)
+    logger.log(ActionLogEntry(f'Found {corr_in[0].shape[1]} inliers and {corr_out[0].shape[1]} outliers'))
 
     images = [config.img1, config.img2]
     cols = 3
