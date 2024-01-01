@@ -20,7 +20,7 @@ class BasePlotter:
 
     def save(self, outfile: str):
         self._prepare()
-        self.fig.savefig(outfile, bbox_inches='tight')
+        self.fig.savefig(outfile, bbox_inches='tight', dpi=500)
 
 
 class Plotter(BasePlotter):

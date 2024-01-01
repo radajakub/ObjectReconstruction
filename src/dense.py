@@ -24,26 +24,26 @@ if __name__ == "__main__":
 
     stereo.save()
 
+    logger.log(ActionLogEntry('Save rectified images and corresponding disparity maps'))
+
+    disparity_path = os.path.join(config.outpath, 'disparities')
+    os.makedirs(disparity_path, exist_ok=True)
+
     # plot disparities
-    # (1) horizontal
-    horizontal_plotter = Plotter(rows=3, cols=3)  # there is 9 of them
-    for i, (pair, disparity) in enumerate(zip(*stereo.get_horizontal_disparities())):
-        row = i // 3
-        col = i % 3
-        horizontal_plotter.set_title(f'Disparity for image pair {pair}', row=row, col=col)
-        horizontal_plotter.add_image_nan(disparity, row=row, col=col)
+    for disps in [stereo.get_horizontal_disparities(), stereo.get_vertical_disparities()]:
+        for pair, disparity in zip(*disps):
+            i1, i2 = pair
+            img1, img2 = stereo.get_rectified_to_plot(i1, i2)
+            plotter = Plotter(rows=1, cols=3)
+            plotter.set_title(f'Image {i1}', row=1, col=1)
+            plotter.add_image(img1, row=1, col=1)
+            plotter.set_title(f'Image {i2}', row=1, col=2)
+            plotter.add_image(img2, row=1, col=2)
+            plotter.set_title(f'Disparity map', row=1, col=3)
+            plotter.add_image_nan(disparity, row=1, col=3)
+            if config.outpath is not None:
+                plotter.save(os.path.join(disparity_path, f'{i1}_{i2}.png'))
+            else:
+                plotter.show()
 
-    # (2) vertical
-    vertical_plotter = Plotter(rows=2, cols=4)  # there is 8 of them
-    for i, (pair, disparity) in enumerate(zip(*stereo.get_vertical_disparities())):
-        row = i // 4
-        col = i % 4
-        vertical_plotter.set_title(f'Disparity for image pair {pair}', row=row, col=col)
-        vertical_plotter.add_image_nan(disparity, row=row, col=col)
-
-    if config.outpath is not None:
-        horizontal_plotter.save(os.path.join(config.outpath, 'horizontal_disparities.png'))
-        vertical_plotter.save(os.path.join(config.outpath, 'vertical_disparities.png'))
-    else:
-        horizontal_plotter.show()
-        vertical_plotter.show()
+    logger.log(ActionLogEntry('FINISHED'))

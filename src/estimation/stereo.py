@@ -115,7 +115,7 @@ class StereoMatcher:
             # keep only inliers wrt F
             u1 = tb.e2p(u1)
             u2 = tb.e2p(u2)
-            vals = tb.err_F_sampson(F, u1, u2)
+            vals = np.sqrt(tb.err_F_sampson(F, u1, u2))
             inlier_indices = vals < self.config.fundamental_threshold
             u1 = u1[:, inlier_indices]
             u2 = u2[:, inlier_indices]
@@ -177,6 +177,10 @@ class StereoMatcher:
 
     def get_disparity_to_plot(self, i1: int, i2: int) -> Image.Image:
         return self.disparities[(i1, i2)]
+
+    def get_rectified_to_plot(self, i1: int, i2: int) -> [Image.Image, Image.Image]:
+        data = self.rectified[(i1, i2)]
+        return data.img1, data.img2
 
     def save(self) -> None:
         if self.config.outpath is None:
