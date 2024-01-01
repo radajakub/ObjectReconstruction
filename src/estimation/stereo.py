@@ -161,8 +161,12 @@ class StereoMatcher:
             corr1 = np.linalg.inv(rectified_data.H1) @ corr1
             corr2 = np.linalg.inv(rectified_data.H2) @ corr2
             # add them to point cloud
-            points = self.point_cloud.add_dense(self.camera_set.get_camera(
-                i1), self.camera_set.get_camera(i2), corr1, corr2)
+            points = self.point_cloud.add_dense(
+                self.camera_set.get_camera(i1),
+                self.camera_set.get_camera(i2),
+                corr1,
+                corr2
+            )
             self.logger.log(ActionLogEntry(f'Added {points} dense points for cameras {i1} and {i2}'))
 
     def get_horizontal_disparities(self) -> tuple[list[tuple[int, int]], list[np.ndarray]]:

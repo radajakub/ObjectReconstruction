@@ -1,3 +1,4 @@
+import sys
 import os
 
 import numpy as np
@@ -8,8 +9,8 @@ from models import Linear
 from utils import Config
 
 if __name__ == "__main__":
-    config = Config(argv=None)
-    X = np.loadtxt('data/ransac/ransac.txt').T
+    config = Config(argv=sys.argv)
+    X = np.loadtxt(os.path.join(config.scene, 'ransac.txt')).T
     orig_line = np.array([-10, 3, 1200])[:, np.newaxis]
 
     plotter = Plotter(rows=1, cols=2, hide_axes=True, invert_yaxis=False, aspect_equal=True)
@@ -30,6 +31,8 @@ if __name__ == "__main__":
     plotter.add_line(estimate.M, col=2, color='blue')
 
     if config.outpath is not None:
+        print(config.outpath)
+        os.makedirs(config.outpath, exist_ok=True)
         plotter.save(outfile=os.path.join(config.outpath, 'ransac.png'))
         logger.dump(path=config.outpath)
     else:
