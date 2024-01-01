@@ -1,11 +1,14 @@
+import os
+
 import numpy as np
 
-from inout import Plotter, Logger
+from inout import Plotter, Logger, ActionLogEntry
 from estimation import RANSAC
 from models import Linear
+from utils import Config
 
 if __name__ == "__main__":
-    print('Testing RANSAC on line fitting...')
+    config = Config(argv=None)
     X = np.loadtxt('data/ransac/ransac.txt').T
     orig_line = np.array([-10, 3, 1200])[:, np.newaxis]
 
@@ -17,17 +20,17 @@ if __name__ == "__main__":
     plotter.add_points(X, col=2)
     plotter.add_line(orig_line, col=2, color='red')
 
-    logger = Logger()
+    logger = Logger(config=config)
     logger.intro()
+    logger.log(ActionLogEntry('Estimating line with RANSAC'))
 
-    ransac = RANSAC(model=Linear(), max_iterations=1000, threshold=3,
-                    p=0.999, rng=np.random.default_rng(0), logger=logger)
+    ransac = RANSAC(model=Linear(), config=config, rng=np.random.default_rng(0), logger=logger)
     estimate = ransac.fit(X)
 
     plotter.add_line(estimate.M, col=2, color='blue')
 
-    logger.dump()
-    logger.summary()
-    logger.outro()
-
-    plotter.show()
+    if config.outpath is not None:
+        plotter.save(outfile=os.path.join(config.outpath, 'ransac.png'))
+        logger.dump(path=config.outpath)
+    else:
+        plotter.show()

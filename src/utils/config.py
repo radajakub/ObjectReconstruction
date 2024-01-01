@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 
 from inout import DataLoader
 
@@ -13,12 +14,7 @@ class Config:
     default_reprojection_threshold = 3
     default_fundamental_threshold = 0.05
 
-    def __init__(self, argv: list[str]) -> None:
-        args = argv[1:]
-        if len(args) % 2 != 0:
-            print("wrong number of arguments")
-            exit(1)
-
+    def __init__(self, argv: Optional[list[str]]) -> None:
         self.scene = None
         self.img1 = None
         self.img2 = None
@@ -32,6 +28,14 @@ class Config:
         self.pose_threshold = Config.default_threshold
         self.reprojection_threshold = Config.default_reprojection_threshold
         self.fundamental_threshold = Config.default_fundamental_threshold
+
+        if argv is None:
+            return
+
+        args = argv[1:]
+        if len(args) % 2 != 0:
+            print("wrong number of arguments")
+            exit(1)
 
         for i in range(0, len(args), 2):
             key, val = args[i], args[i+1]
