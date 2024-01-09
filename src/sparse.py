@@ -28,9 +28,6 @@ if __name__ == "__main__":
 
     camera_set, point_cloud = camera_gluer.get_result()
 
-    # stereo = StereoMatcher(config, loader, camera_set, point_cloud, logger)
-    # stereo.start_disparities()
-
     plotter = Plotter3D(hide_axes=True, aspect_equal=True)
     plotter.add_points(point_cloud.sparse_get_all())
     plotter.add_cameras(camera_set.get_cameras())
