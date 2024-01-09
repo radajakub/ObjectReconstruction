@@ -49,9 +49,7 @@ For example: `python src/epipolar_geometry.py --scene scene_1 --img1 1 --img2 2`
 
 ## Sparse point cloud
 
-Script to compute sparse point cloud from a scene and initial pair of cameras is located in `src/sparse.py`. This script also prepares the tasks for computing disparities for the dense point cloud. It also computes the rectified images.
-
-It has multiple parameters tuning the behaviour of the algorithm:
+Script to compute sparse point cloud from a scene and initial pair of cameras is located in `src/sparse.py`. It has multiple parameters tuning the behaviour of the algorithm:
 
 **Required**
 - `--scene <scene_name>` - name of the scene folder in `data/` folder
@@ -69,11 +67,35 @@ It has multiple parameters tuning the behaviour of the algorithm:
 
 For example: `python src/sparse.py --scene scene_1 --img1 5 --img2 6 --out out` computes the sparse point cloud for scene `scene_1` using images `5` and `6` as initial pair of cameras and saves the point cloud and the cameras into `out/scene_1` folder.
 
-The rectified images and data for computing disparity maps in Matlab are saved into `out/scene_1/rectified/stereo_in.mat`.
 
 ## Dense point cloud
 
-Script to compute dense point cloud from sparse point cloud and disparities computed by previous script is in `src/dense.py`. It saves the dense point and shows the disparity maps computed by Matlab algorithm.
+This step is divided into two parts because we need to compute disparity maps in Matlab.
+
+### Rectifying images and computing disparity maps
+
+Script is located in `src/dense_first.py`. It loads sparse point cloud and cameras from previous step, computes rectified images for preselected camera pairs and prepares tasks to compute disparity maps.
+
+It has multiple parameters tuning the behaviour of the algorithm:
+
+**Required**
+- `--scene <scene_name>` - name of the scene folder in `data/` folder
+- `--in <path>` - path to the input folder where the sparse point cloud is saved (output of previous task)
+**Optional**
+- `--out <path>` - path to the output folder where all outputs are saved (if not provided, the outputs are only shown)
+- `--seed <int>` - seed for the random generator (defuault from system)
+- `--silent <bool>` - if `True`, the logs are not shown (`default False`)
+- `--fundamental-threshold <float>` - threshold for computing inliers from disparity maps using sampson reprojection error (`default 0.05`)
+
+The rectified images and data for computing disparity maps in Matlab are saved into `<out>/<scene>/rectified/stereo_in.mat`.
+
+### Compute disparity maps
+
+Use `stereo_in.mat` in Matlab script to create `stereo_out.mat` with disparity maps. Copy it to the same folder used for `stereo_in.mat`.
+
+### Computing dense point cloud
+
+Script to compute dense point cloud from sparse point cloud and disparities computed by previous scripts is in `src/dense_second.py`. It saves the dense point and shows the disparity maps computed by Matlab algorithm.
 
 It has multiple parameters tuning the behaviour of the algorithm:
 
@@ -86,5 +108,6 @@ It has multiple parameters tuning the behaviour of the algorithm:
 - `--silent <bool>` - if `True`, the logs are not shown (`default False`)
 - `--fundamental-threshold <float>` - threshold for computing inliers from disparity maps using sampson reprojection error (`default 0.05`)
 
-For example: `python src/dense.py --scene scene_1 --in out/ --out out/scene_1` computes the dense point cloud for scene `scene_1` and saves it together with disparity maps.
-The disparity maps from the intermediate step are loaded from `out/scene_1/rectified/stereo_out.mat`.
+For example: `python src/dense_second.py --scene scene_1 --in dense_first --out dense_second` computes the dense point cloud for scene `scene_1` and saves it together with disparity maps.
+The disparity maps from the intermediate step are loaded from `<out>/<scene>/rectified/stereo_out.mat`.
+
