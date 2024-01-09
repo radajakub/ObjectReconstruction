@@ -85,7 +85,7 @@ class Config:
             raise ValueError('img1 and img2 must be specified for epipolar estimation')
 
     def __str__(self) -> str:
-        res = 'config:'
+        res = 'config:\n'
         res += f'-- scene {self.scene} with images {self.img1} and {self.img2}\n'
         res += f'-- seed {self.seed}\n'
         res += f'-- save output image to {self.outpath}\n'
