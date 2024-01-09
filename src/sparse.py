@@ -28,14 +28,14 @@ if __name__ == "__main__":
 
     camera_set, point_cloud = camera_gluer.get_result()
 
-    stereo = StereoMatcher(config, loader, camera_set, point_cloud, logger)
-    stereo.start_disparities()
+    # stereo = StereoMatcher(config, loader, camera_set, point_cloud, logger)
+    # stereo.start_disparities()
 
     plotter = Plotter3D(hide_axes=True, aspect_equal=True)
     plotter.add_points(point_cloud.sparse_get_all())
     plotter.add_cameras(camera_set.get_cameras())
 
-    logger.log(ActionLogEntry('FINISHED: All cameras glued, sparse point computed and rectified images prepared'))
+    logger.log(ActionLogEntry('FINISHED: All cameras glued, sparse point cloud computed'))
 
     if config.outpath is None:
         plotter.show()
@@ -43,4 +43,4 @@ if __name__ == "__main__":
         outpath = config.outpath
         os.makedirs(outpath, exist_ok=True)
         logger.dump(path=outpath)
-        stereo.save()
+        camera_gluer.save()

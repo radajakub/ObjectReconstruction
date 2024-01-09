@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 
 from packages.corresp import Corresp
@@ -30,11 +32,8 @@ class CameraGluer(RANSAC):
         super().__init__(model=GlobalPose(loader.K), config=config, rng=rng)
         self.logger = logger
         self.loader = loader
-        self.epipolar_estimator = EpipolarEstimator(self.loader.K, config, rng, logger)
-        self.pose_threshold = config.pose_threshold
-        self.reprojection_threshold = config.reprojection_threshold
-        self.p = config.p
-        self.max_iterations = config.max_iter
+        self.config = config
+        self.epipolar_estimator = EpipolarEstimator(K=self.loader.K, config=config, rng=rng, logger=logger)
         self.reset_cameras()
         self.initialize_manipulator()
 
@@ -142,7 +141,7 @@ class CameraGluer(RANSAC):
             X = tb.Pu2X(Pj.P, Pi.P, corrj, corri)
             ej = self.model.error(X, corrj, Pj)
             ei = self.model.error(X, corri, Pi)
-            correct = np.logical_and(ej < self.reprojection_threshold, ei < self.reprojection_threshold)
+            correct = np.logical_and(ej < self.config.reprojection_threshold, ei < self.config.reprojection_threshold)
             corrj = corrj[:, correct]
             corri = corri[:, correct]
 
@@ -157,7 +156,7 @@ class CameraGluer(RANSAC):
 
             # Verify (by reprojection error) scene-to-image correspondences in Xu_tentative. A subset of good points is obtained
             e = self.model.error(X, u, Pi)
-            inl = np.logical_and(~Xu_verified, e < self.reprojection_threshold)
+            inl = np.logical_and(~Xu_verified, e < self.config.reprojection_threshold)
             curr_ok = np.arange(X.shape[1])[inl]
 
             self.manipulator.verify_x(Ii - 1, curr_ok)
@@ -175,7 +174,7 @@ class CameraGluer(RANSAC):
             raise Exception("P3P: Not enough correspondences")
 
         # (2) Initialise number of iterations and its allowed maximum
-        self.it = 0
+        it = 0
         Nmax = np.inf
 
         # (3) Initialise best hypothesis and support
@@ -183,8 +182,8 @@ class CameraGluer(RANSAC):
         best_estimate = None
 
         # (4) Loop while number of iterations is less than maximum allowed
-        while self.it <= Nmax and self.it < self.max_iterations:
-            self.it += 1
+        while it <= Nmax and it < self.config.max_iter:
+            it += 1
             # (5) Generate hypothesis
             # (5a) Sample 3 correspondences
             sample_idx = self.rng.choice(N, self.model.min_samples, replace=False)
@@ -208,16 +207,24 @@ class CameraGluer(RANSAC):
 
                 # (6c) Compute reprojection error
                 err = self.model.error(visible_scene_points, visible_image_points, P)
-                inliers = err < np.power(self.pose_threshold, 2)
+                inliers = err < np.power(self.config.pose_threshold, 2)
                 inlier_indices = visible_indices[inliers]
-                support = self.model.support(err[inliers], self.pose_threshold)
+                support = self.model.support(err[inliers], self.config.pose_threshold)
                 if support > best_support:
                     best_support = support
                     best_estimate = GlobalPoseEstimate(R, t, inlier_indices)
                     eps = 1 - inlier_indices.shape[0] / N
-                    Nmax = 0 if eps == 0 else (np.log(1 - self.p) / np.log(1 - np.power(1 - eps, 3)))
+                    Nmax = 0 if eps == 0 else (np.log(1 - self.config.p) / np.log(1 - np.power(1 - eps, 3)))
 
-                self.logger.log(GlobalPoseLogEntry(iteration=self.it, inliers=inliers.sum(),
+                self.logger.log(GlobalPoseLogEntry(iteration=it, inliers=inliers.sum(),
                                 visible=visible_indices.shape[0], support=support, Nmax=Nmax))
 
         return best_estimate
+
+    def save(self) -> None:
+        if self.config.outpath is None:
+            raise ValueError('Cannot save CameraGluer without outpath')
+        outpath = self.config.outpath
+        os.makedirs(outpath, exist_ok=True)
+        self.camera_set.save(outpath)
+        self.point_cloud.save(outpath)
