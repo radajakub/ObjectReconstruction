@@ -49,7 +49,7 @@ For example: `python src/epipolar_geometry.py --scene scene_1 --img1 1 --img2 2`
 
 ## Sparse point cloud
 
-Script to compute sparse point cloud from a scene and initial pair of cameras is located in `src/sparse.py`. This script also prepares the tasks for computing disparities for the dense point cloud. It also computes the rectivied images.
+Script to compute sparse point cloud from a scene and initial pair of cameras is located in `src/sparse.py`. This script also prepares the tasks for computing disparities for the dense point cloud. It also computes the rectified images.
 
 It has multiple parameters tuning the behaviour of the algorithm:
 
