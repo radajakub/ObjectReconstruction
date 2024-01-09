@@ -44,4 +44,3 @@ if __name__ == "__main__":
         os.makedirs(outpath, exist_ok=True)
         logger.dump(path=outpath)
         stereo.save()
-        plotter.save(outfile=os.path.join(outpath, 'sparse.png'))
