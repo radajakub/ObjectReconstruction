@@ -70,8 +70,12 @@ def Pu2X(P1: np.ndarray, P2: np.ndarray, X1: np.ndarray, X2: np.ndarray) -> np.n
         u1, v1 = x1
         u2, v2 = x2
         D = np.array([u1 * p13 - p11, v1 * p13 - p12, u2 * p23 - p21, v2 * p23 - p22])
-        _, _, Vt = np.linalg.svd(D.T @ D, full_matrices=False)
+        # add numerical conditioning
+        S = np.diag(np.array([1/np.max(np.abs(D[:, j])) for j in range(D.shape[0])]))
+        D_bar = D @ S
+        _, _, Vt = np.linalg.svd(D_bar.T @ D_bar, full_matrices=False)
         X[:, i] = Vt.T[:, -1] / Vt.T[-1, -1]
+        X[:, i] = S @ X[:, i]
 
     return X
 
