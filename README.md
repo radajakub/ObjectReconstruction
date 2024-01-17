@@ -1,6 +1,16 @@
 # ObjectReconstruction
 3D Object reconstruction from photos as a semestral project for Three-Dimensional Computer Vision
 
+The goal is to reconstruct a 3D point cloud representing and object from a given set of photos of the object from multiple views using methods from 3D computer vision.
+
+## Example
+Construct a 3D point cloud from this set of 12 photos capturing a gate of a church in Prague.
+![all_images](https://github.com/radajakub/ObjectReconstruction/assets/101521391/32e9513c-40e1-4d1f-9747-cf5e7f14e8ce)
+
+The resulting point cloud looks like this.
+<img width="1049" alt="cloud" src="https://github.com/radajakub/ObjectReconstruction/assets/101521391/bccaf84c-f79d-4c95-9b9c-913e854e2155">
+
+
 ## Installation
 
 Recommended version of Python is `3.11.5`.
